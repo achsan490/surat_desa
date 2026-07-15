@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum JenisSurat {
+  SKTM
+  SURAT_KEMATIAN
+  SURAT_DOMISILI
+  SURAT_KETERANGAN_USAHA
+  SURAT_BELUM_MENIKAH
+  SURAT_KELAHIRAN
+  SURAT_PINDAH
+  SURAT_PENGHASILAN
+  SURAT_AHLI_WARIS
+  SURAT_PENGANTAR_NIKAH
+  SURAT_KEPEMILIKAN_TANAH
+  SURAT_PENGANTAR_SKCK
+}
+
+enum StatusSurat {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Surat {
+  id                String      @id @default(uuid())
+  nik               String
+  nama_lengkap      String
+  no_whatsapp       String
+  jenis_surat       JenisSurat
+  data_kustom       Json
+  url_berkas_syarat String?
+  status            StatusSurat @default(PENDING)
+  alasan_penolakan  String?
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  @@index([nik])
+  @@index([status])
+  @@index([jenis_surat])
+  @@map("surat")
+}
