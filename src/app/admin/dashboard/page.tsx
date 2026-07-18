@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/surat/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FilterSelect } from "@/components/admin/FilterSelect";
+import { DeleteSuratButton } from "@/components/admin/DeleteSuratButton";
 import { JENIS_SURAT_CONFIG } from "@/types";
 import type { StatusSurat, JenisSurat } from "@/types";
 import {
@@ -171,13 +172,16 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
                           <StatusBadge status={surat.status} />
                         </TableCell>
                         <TableCell className="px-6 py-4 text-right">
-                          <Link
-                            href={`/admin/dashboard/surat/${surat.id}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
-                          >
-                            Detail
-                            <ArrowUpRight className="h-3.5 w-3.5" />
-                          </Link>
+                          <div className="flex items-center justify-end">
+                            <Link
+                              href={`/admin/dashboard/surat/${surat.id}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                            >
+                              Detail
+                              <ArrowUpRight className="h-3.5 w-3.5" />
+                            </Link>
+                            <DeleteSuratButton id={surat.id} namaPemohon={surat.nama_lengkap} />
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

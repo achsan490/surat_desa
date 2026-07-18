@@ -13,40 +13,50 @@ function getAssetPath(filename: string): string {
 }
 
 function drawHeader(doc: PDFKit.PDFDocument) {
-  const logoPath = getAssetPath("logo-desa.png");
+  const logoJombangPath = getAssetPath("logo-jombang.png");
   const pageWidth = doc.page.width;
   const marginLeft = 72;
   const marginRight = pageWidth - 72;
 
-  // Coba embed logo desa jika ada
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, marginLeft, 40, { width: 65, height: 65 });
+  // Ukuran logo
+  const logoSize = 70;
+  const logoX = marginLeft;
+  const logoY = 32;
+
+  // Logo Kabupaten Jombang di KIRI ATAS
+  if (fs.existsSync(logoJombangPath)) {
+    doc.image(logoJombangPath, logoX, logoY, { width: logoSize });
   }
 
-  // Header teks kop surat
+  // Teks kop: mulai dari setelah logo, center dalam sisa lebar
+  const textX = logoX + logoSize + 10;   // mulai setelah logo + gap
+  const textWidth = marginRight - textX;  // sisa lebar halaman ke kanan
+
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor("#1a1a2e")
-    .text("PEMERINTAH KABUPATEN JOMBANG", marginLeft + 80, 42, {
+    .text("PEMERINTAH KABUPATEN JOMBANG", textX, 34, {
       align: "center",
-      width: pageWidth - 224,
+      width: textWidth,
     });
 
   doc
     .font("Helvetica")
     .fontSize(10)
-    .text("KECAMATAN PLANDAAN", marginLeft + 80, 56, {
+    .fillColor("#1a1a2e")
+    .text("KECAMATAN PLANDAAN", textX, 49, {
       align: "center",
-      width: pageWidth - 224,
+      width: textWidth,
     });
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(14)
-    .text("DESA KLITIH", marginLeft + 80, 70, {
+    .fontSize(15)
+    .fillColor("#1a1a2e")
+    .text("DESA KLITIH", textX, 63, {
       align: "center",
-      width: pageWidth - 224,
+      width: textWidth,
     });
 
   doc
@@ -55,22 +65,22 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     .fillColor("#555")
     .text(
       "Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang, Jawa Timur | Telp: (0321) 123456",
-      marginLeft + 80,
-      87,
-      { align: "center", width: pageWidth - 224 }
+      textX,
+      83,
+      { align: "center", width: textWidth }
     );
 
   // Garis kop surat (double line)
   doc
-    .moveTo(marginLeft, 110)
-    .lineTo(marginRight, 110)
+    .moveTo(marginLeft, 108)
+    .lineTo(marginRight, 108)
     .lineWidth(3)
     .strokeColor("#1a1a2e")
     .stroke();
 
   doc
-    .moveTo(marginLeft, 114)
-    .lineTo(marginRight, 114)
+    .moveTo(marginLeft, 112)
+    .lineTo(marginRight, 112)
     .lineWidth(1)
     .strokeColor("#1a1a2e")
     .stroke();
@@ -80,7 +90,9 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
   const pageWidth = doc.page.width;
   const marginLeft = 72;
   const marginRight = pageWidth - 72;
-  const footerY = doc.page.height - 200;
+
+  // Footer dimulai cukup tinggi agar semua elemen aman di halaman 1
+  const footerY = doc.page.height - 260;
 
   // Kota dan tanggal
   const tanggalStr = format(new Date(surat.created_at), "d MMMM yyyy", { locale: idLocale });
@@ -98,11 +110,11 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
       width: 200,
     });
 
-  // TTD & Stempel
+  // TTD & Stempel — rata kanan
   const ttdPath = getAssetPath("tanda-tangan-kades.png");
   const stempelPath = getAssetPath("stempel-desa.png");
 
-  const ttdX = marginRight - 170;
+  const ttdX = marginRight - 110;  // rata kanan dengan margin halaman
   const ttdY = footerY + 34;
 
   if (fs.existsSync(stempelPath)) {
@@ -114,7 +126,6 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
   if (fs.existsSync(ttdPath)) {
     doc.image(ttdPath, ttdX, ttdY, { width: 110, height: 55 });
   } else {
-    // Fallback jika file aset belum ada
     doc.rect(ttdX, ttdY, 110, 50).dash(4, { space: 2 }).stroke("#aaa").undash();
     doc.font("Helvetica").fontSize(8).fillColor("#aaa").text("[Tanda Tangan]", ttdX, ttdY + 18, { width: 110, align: "center" });
   }
@@ -123,18 +134,21 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     .font("Helvetica-Bold")
     .fontSize(10)
     .fillColor("#333")
-    .text("SUYOTO, S.Pd.", marginRight - 200, ttdY + 60, { align: "right", width: 200 });
+    .text("Siti Ro'aini", marginRight - 200, ttdY + 60, { align: "right", width: 200 });
 
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("NIP. 19750101 200003 1 001", marginRight - 200, ttdY + 74, { align: "right", width: 200 });
+    .text("Kepala Desa Klitih", marginRight - 200, ttdY + 74, { align: "right", width: 200 });
 
-  // Garis bawah
+  // Garis & ID dokumen — posisi relatif dari footerY (aman, tidak pakai page.height)
+  const garisY = footerY + 160;
+  const idY    = footerY + 168;
+
   doc
-    .moveTo(marginLeft, doc.page.height - 50)
-    .lineTo(marginRight, doc.page.height - 50)
-    .lineWidth(1)
+    .moveTo(marginLeft, garisY)
+    .lineTo(marginRight, garisY)
+    .lineWidth(0.5)
     .strokeColor("#ccc")
     .stroke();
 
@@ -145,10 +159,12 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     .text(
       `Dokumen ini diterbitkan secara resmi oleh Sistem Informasi Desa Klitih | ID: ${surat.id}`,
       marginLeft,
-      doc.page.height - 42,
-      { align: "center", width: marginRight - marginLeft }
+      idY,
+      { align: "center", width: marginRight - marginLeft, lineBreak: false }
     );
 }
+
+
 
 function drawNomorSurat(doc: PDFKit.PDFDocument, surat: SuratWithId, nomorUrut: string) {
   const tahun = new Date(surat.created_at).getFullYear();

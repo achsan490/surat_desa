@@ -212,3 +212,21 @@ export async function rejectSurat(id: string, formData: FormData): Promise<Actio
     return { success: false, error: "Gagal menolak surat. Silakan coba lagi." };
   }
 }
+
+// ────────────────────────────────────────────────
+// ADMIN: Hapus surat berdasarkan ID
+// ────────────────────────────────────────────────
+export async function deleteSurat(id: string): Promise<ActionResult> {
+  try {
+    const surat = await prisma.surat.findUnique({ where: { id } });
+    if (!surat) return { success: false, error: "Surat tidak ditemukan." };
+
+    await prisma.surat.delete({ where: { id } });
+
+    revalidatePath("/admin/dashboard");
+    return { success: true, data: undefined, message: "Surat berhasil dihapus." };
+  } catch (error) {
+    console.error("[deleteSurat] Error:", error);
+    return { success: false, error: "Gagal menghapus surat. Silakan coba lagi." };
+  }
+}

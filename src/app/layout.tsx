@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   keywords: ["surat desa", "SIPAS", "administrasi desa", "Klitih", "surat keterangan"],
   authors: [{ name: "Desa Klitih" }],
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
+  icons: {
+    icon: "/logo-jombang.png",
+    shortcut: "/logo-jombang.png",
+    apple: "/logo-jombang.png",
+  },
 };
 
 export default function RootLayout({

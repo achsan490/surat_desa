@@ -171,10 +171,10 @@ export default function HomePage() {
       </section>
 
       {/* ─── Layanan Section ─── */}
-      <section className="py-20 bg-white" id="layanan">
+      <section className="py-20 bg-gradient-to-b from-white to-slate-50" id="layanan">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 space-y-3">
-            <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+            <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 px-4 py-1">
               Layanan Kami
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
@@ -189,24 +189,27 @@ export default function HomePage() {
             {LAYANAN.map(({ key, icon: Icon, label, singkat, desc, color, bgLight, textColor }) => (
               <Card
                 key={key}
-                className="group border border-slate-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300 cursor-default overflow-hidden"
+                className="group relative border border-slate-200 hover:border-transparent hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-default overflow-hidden bg-white"
               >
-                <CardContent className="p-6 space-y-4">
-                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${color} shadow-md`}>
-                    <Icon className="h-6 w-6 text-white" />
+                {/* Colored top accent bar */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                <CardContent className="p-6 space-y-4 pt-7">
+                  <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${color} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="h-7 w-7 text-white" />
                   </div>
                   <div>
-                    <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-md ${bgLight} ${textColor} mb-2`}>
+                    <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full ${bgLight} ${textColor} mb-2 border border-current/10`}>
                       {singkat}
                     </span>
-                    <h3 className="font-semibold text-slate-900 leading-snug">{label}</h3>
+                    <h3 className="font-bold text-slate-900 leading-snug text-base">{label}</h3>
                     <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">{desc}</p>
                   </div>
                   <Link
                     href="/ajukan-surat"
-                    className={`inline-flex items-center gap-1 text-xs font-semibold ${textColor} group-hover:gap-2 transition-all`}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${textColor} group-hover:gap-3 transition-all duration-200`}
                   >
-                    Ajukan Sekarang <ArrowRight className="h-3 w-3" />
+                    Ajukan Sekarang <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </CardContent>
               </Card>
@@ -214,6 +217,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
 
       {/* ─── Alur Pengajuan ─── */}
       <section className="py-20 bg-slate-50" id="alur">

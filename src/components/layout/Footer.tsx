@@ -68,9 +68,15 @@ export default function Footer() {
 
         <div className="mt-10 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <p>© {new Date().getFullYear()} Desa Klitih. Hak cipta dilindungi.</p>
-          <Link href="/admin/login" className="hover:text-slate-300 transition-colors">
-            Portal Perangkat Desa
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/kelompok" className="hover:text-slate-300 hover:underline transition-colors text-slate-400 font-medium">
+              Dibuat oleh Kelompok 27 KKN 2026
+            </Link>
+            <span className="text-slate-700">|</span>
+            <Link href="/admin/login" className="hover:text-slate-300 transition-colors">
+              Portal Perangkat Desa
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
