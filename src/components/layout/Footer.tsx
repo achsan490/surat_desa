@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Building2, Phone, MapPin, Clock, Mail } from "lucide-react";
+import { Building2, Phone, MapPin, Clock, Mail, MessageCircle, FileText, Search, Users } from "lucide-react";
 
 export default function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-300">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="container mx-auto px-4 py-12 md:py-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
           {/* Brand */}
-          <div className="space-y-3">
+          <div className="sm:col-span-2 md:col-span-1 space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600">
                 <Building2 className="h-5 w-5 text-white" />
@@ -20,10 +20,20 @@ export default function Footer() {
             <p className="text-sm text-slate-400 leading-relaxed">
               Sistem Informasi Pelayanan Administrasi Surat (SIPAS) Desa Klitih. Layanan cepat, transparan, dan terpercaya untuk warga.
             </p>
+            {/* WA Quick Contact */}
+            <a
+              href="https://wa.me/6285730403338"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 text-emerald-400 hover:text-emerald-300 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Hubungi via WhatsApp
+            </a>
           </div>
 
           {/* Layanan */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <h4 className="font-semibold text-white text-sm">Layanan Surat</h4>
             <ul className="space-y-2 text-sm">
               {[
@@ -39,10 +49,41 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Kontak */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-white text-sm">Kontak & Jam Layanan</h4>
+          {/* Navigasi Cepat */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white text-sm">Navigasi Cepat</h4>
             <ul className="space-y-2.5 text-sm">
+              <li>
+                <Link href="/ajukan-surat" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                  <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                  Ajukan Surat
+                </Link>
+              </li>
+              <li>
+                <Link href="/cek-status" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                  <Search className="h-3.5 w-3.5 flex-shrink-0" />
+                  Cek Status Surat
+                </Link>
+              </li>
+              <li>
+                <Link href="/kelompok" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                  <Users className="h-3.5 w-3.5 flex-shrink-0" />
+                  Tim KKN 27
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/login" className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors">
+                  <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  Portal Perangkat Desa
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Kontak */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white text-sm">Kontak &amp; Jam Layanan</h4>
+            <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2 text-slate-400">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-400" />
                 Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang
@@ -66,15 +107,15 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} Desa Klitih. Hak cipta dilindungi.</p>
+        <div className="mt-10 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p>© {new Date().getFullYear()} Desa Klitih, Kab. Jombang. Hak cipta dilindungi.</p>
           <div className="flex items-center gap-4">
             <Link href="/kelompok" className="hover:text-slate-300 hover:underline transition-colors text-slate-400 font-medium">
               Dibuat oleh Kelompok 27 KKN 2026
             </Link>
             <span className="text-slate-700">|</span>
             <Link href="/admin/login" className="hover:text-slate-300 transition-colors">
-              Portal Perangkat Desa
+              Portal Admin
             </Link>
           </div>
         </div>

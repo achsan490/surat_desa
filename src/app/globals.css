@@ -143,3 +143,13 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* FAQ accordion chevron rotation */
+details[open] summary .faq-chevron,
+details.group:is([open]) .group-open\:rotate-180 {
+  transform: rotate(180deg);
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}

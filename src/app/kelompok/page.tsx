@@ -16,7 +16,7 @@ const DPL = {
   peran: "Dosen Pembimbing Lapangan (DPL)",
   wa: "085730403338",
   waLink: "https://wa.me/6285730403338",
-  foto: "/dpl.jpg",
+  foto: "/dpl.jpeg",
 };
 
 const ANGGOTA = [
