@@ -34,21 +34,32 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Buat folder upload jika belum ada
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
-    // Nama file unik
-    const ext = path.extname(file.name);
+    const ext = path.extname(file.name) || ".png";
     const uniqueName = `${uuidv4()}${ext}`;
-    const filePath = path.join(uploadDir, uniqueName);
 
-    await writeFile(filePath, buffer);
+    // Coba simpan ke sistem berkas lokal
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
+      const filePath = path.join(uploadDir, uniqueName);
+      await writeFile(filePath, buffer);
 
-    // URL publik untuk disimpan ke database
-    const publicUrl = `/uploads/${uniqueName}`;
+      return NextResponse.json(
+        { url: `/uploads/${uniqueName}`, filename: uniqueName },
+        { status: 201 }
+      );
+    } catch (fsErr) {
+      console.warn("[upload] Storage lokal ditolak/read-only (lingkungan Vercel/Serverless), beralih ke Base64 Data URL:", fsErr);
+      // Fallback otomatis untuk Vercel / Serverless (Read-only filesystem)
+      const mimeType = file.type || "image/png";
+      const base64Data = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64Data}`;
 
-    return NextResponse.json({ url: publicUrl, filename: uniqueName }, { status: 201 });
+      return NextResponse.json(
+        { url: dataUrl, filename: uniqueName },
+        { status: 201 }
+      );
+    }
   } catch (error) {
     console.error("[upload] Error:", error);
     return NextResponse.json(
@@ -57,4 +68,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

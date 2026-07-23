@@ -114,23 +114,33 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
       width: 200,
     });
 
-  // Helper resolve file path
-  const resolveFilePath = (url?: string) => {
+  // Helper resolve file path or Buffer from Base64
+  const resolveImageSource = (url?: string): string | Buffer | null => {
     if (!url) return null;
+    if (url.startsWith("data:")) {
+      try {
+        const base64Data = url.split(",")[1];
+        if (base64Data) return Buffer.from(base64Data, "base64");
+      } catch (err) {
+        console.error("[generateSuratPDF] Gagal parse Base64 image URL:", err);
+      }
+    }
     const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
-    return path.join(process.cwd(), "public", cleanUrl);
+    const localPath = path.join(process.cwd(), "public", cleanUrl);
+    if (fs.existsSync(localPath)) return localPath;
+    return null;
   };
 
-  const ttdPath = resolveFilePath(pengaturan?.url_ttd) ?? getAssetPath("tanda-tangan-kades.png");
-  const stempelPath = resolveFilePath(pengaturan?.url_stempel) ?? getAssetPath("stempel-desa.png");
+  const ttdSource = resolveImageSource(pengaturan?.url_ttd) ?? getAssetPath("tanda-tangan-kades.png");
+  const stempelSource = resolveImageSource(pengaturan?.url_stempel) ?? getAssetPath("stempel-desa.png");
 
   const ttdX = marginRight - 110;  // rata kanan dengan margin halaman
   const ttdY = footerY + 34;
 
-  if (stempelPath && fs.existsSync(stempelPath)) {
+  if (stempelSource && (typeof stempelSource !== "string" || fs.existsSync(stempelSource))) {
     doc.save();
     doc.opacity(0.6);
-    doc.image(stempelPath, ttdX - 30, ttdY - 10, { width: 90 });
+    doc.image(stempelSource, ttdX - 30, ttdY - 10, { width: 90 });
     doc.restore();
   } else {
     const fallbackStempel = getAssetPath("stempel-desa.png");
@@ -142,8 +152,8 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
     }
   }
 
-  if (ttdPath && fs.existsSync(ttdPath)) {
-    doc.image(ttdPath, ttdX, ttdY, { width: 110, height: 55 });
+  if (ttdSource && (typeof ttdSource !== "string" || fs.existsSync(ttdSource))) {
+    doc.image(ttdSource, ttdX, ttdY, { width: 110, height: 55 });
   } else {
     const fallbackTTD = getAssetPath("tanda-tangan-kades.png");
     if (fs.existsSync(fallbackTTD)) {
