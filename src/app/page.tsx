@@ -21,10 +21,15 @@ import {
   ShieldCheck,
   Wifi,
   Timer,
-  BadgeCheck,
   ChevronDown,
   Users,
   Landmark,
+  Heart,
+  Baby,
+  Truck,
+  Wallet,
+  FileBadge,
+  BadgeCheck,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -59,7 +64,7 @@ const LAYANAN = [
     icon: MapPin,
     label: "Surat Keterangan Domisili",
     singkat: "SKDOM",
-    desc: "Bukti resmi tempat tinggal untuk SKCK, perbankan, melamar pekerjaan, dan keperluan lainnya.",
+    desc: "Bukti resmi tempat tinggal untuk SKCK, perbankan, dan melamar pekerjaan.",
     color: "from-emerald-500 to-emerald-700",
     bgLight: "bg-emerald-50",
     textColor: "text-emerald-700",
@@ -69,10 +74,90 @@ const LAYANAN = [
     icon: Briefcase,
     label: "Surat Keterangan Usaha",
     singkat: "SKU",
-    desc: "Legalitas usaha kecil dan mikro warga desa untuk keperluan permodalan dan perizinan.",
+    desc: "Legalitas usaha kecil dan mikro warga desa untuk permodalan dan perizinan.",
     color: "from-orange-500 to-orange-700",
     bgLight: "bg-orange-50",
     textColor: "text-orange-700",
+  },
+  {
+    key: "SURAT_BELUM_MENIKAH",
+    icon: Heart,
+    label: "Surat Keterangan Belum Menikah",
+    singkat: "SKBM",
+    desc: "Keterangan status belum pernah menikah untuk melamar kerja atau beasiswa.",
+    color: "from-pink-500 to-pink-700",
+    bgLight: "bg-pink-50",
+    textColor: "text-pink-700",
+  },
+  {
+    key: "SURAT_KELAHIRAN",
+    icon: Baby,
+    label: "Surat Keterangan Kelahiran",
+    singkat: "SKK",
+    desc: "Keterangan kelahiran bayi untuk pembuatan Akta Kelahiran dan Kartu Keluarga.",
+    color: "from-cyan-500 to-cyan-700",
+    bgLight: "bg-cyan-50",
+    textColor: "text-cyan-700",
+  },
+  {
+    key: "SURAT_PINDAH",
+    icon: Truck,
+    label: "Surat Keterangan Pindah",
+    singkat: "SKP",
+    desc: "Pengurusan surat kepindahan domisili penduduk keluar wilayah desa.",
+    color: "from-indigo-500 to-indigo-700",
+    bgLight: "bg-indigo-50",
+    textColor: "text-indigo-700",
+  },
+  {
+    key: "SURAT_PENGHASILAN",
+    icon: Wallet,
+    label: "Surat Keterangan Penghasilan",
+    singkat: "SKP",
+    desc: "Rincian rata-rata penghasilan bulanan untuk kredit bank atau beasiswa anak.",
+    color: "from-teal-500 to-teal-700",
+    bgLight: "bg-teal-50",
+    textColor: "text-teal-700",
+  },
+  {
+    key: "SURAT_AHLI_WARIS",
+    icon: Users,
+    label: "Surat Keterangan Ahli Waris",
+    singkat: "SKAW",
+    desc: "Keterangan daftar ahli waris sah dari almarhum pewaris untuk hukum.",
+    color: "from-amber-500 to-amber-700",
+    bgLight: "bg-amber-50",
+    textColor: "text-amber-700",
+  },
+  {
+    key: "SURAT_PENGANTAR_NIKAH",
+    icon: FileBadge,
+    label: "Surat Pengantar Nikah",
+    singkat: "SPN",
+    desc: "Surat pengantar rekomendasi akad nikah untuk dikirimkan ke KUA.",
+    color: "from-rose-500 to-rose-700",
+    bgLight: "bg-rose-50",
+    textColor: "text-rose-700",
+  },
+  {
+    key: "SURAT_KEPEMILIKAN_TANAH",
+    icon: Landmark,
+    label: "Kepemilikan Tanah",
+    singkat: "SKKT",
+    desc: "Bukti penguasaan fisik tanah sertifikat/petok D milik warga desa.",
+    color: "from-lime-600 to-lime-800",
+    bgLight: "bg-lime-50",
+    textColor: "text-lime-700",
+  },
+  {
+    key: "SURAT_PENGANTAR_SKCK",
+    icon: ShieldCheck,
+    label: "Surat Pengantar SKCK",
+    singkat: "SKCK",
+    desc: "Surat pengantar berkelakuan baik untuk pembuatan SKCK di kepolisian.",
+    color: "from-slate-600 to-slate-800",
+    bgLight: "bg-slate-50",
+    textColor: "text-slate-700",
   },
 ];
 
@@ -222,7 +307,7 @@ export default function HomePage() {
           <div className="mt-10 md:mt-16 grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto">
             {[
               { label: "Surat Diterbitkan", value: "500+", icon: FileText },
-              { label: "Jenis Layanan", value: "4", icon: Landmark },
+              { label: "Jenis Layanan", value: "12", icon: Landmark },
               { label: "Jam Proses", value: "< 24", icon: Clock },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="text-center p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
@@ -255,7 +340,7 @@ export default function HomePage() {
               Layanan Kami
             </Badge>
             <h2 className="text-2xl md:text-4xl font-bold text-slate-900">
-              4 Jenis Surat yang Tersedia
+              12 Jenis Surat yang Tersedia
             </h2>
             <p className="text-slate-500 max-w-xl mx-auto text-sm md:text-base">
               Semua layanan dapat diajukan secara online tanpa perlu antri di kantor desa.
@@ -411,7 +496,7 @@ export default function HomePage() {
             <p className="text-sm text-slate-500">
               Masih ada pertanyaan?{" "}
               <a
-                href="https://wa.me/6285730403338"
+                href="https://wa.me/6282335448476"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline font-semibold"
@@ -444,7 +529,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h3 className="text-lg md:text-xl font-bold">Butuh Bantuan?</h3>
-                <p className="text-blue-200 text-sm mt-0.5">Hubungi: (0321) 123456</p>
+                <p className="text-blue-200 text-sm mt-0.5">Hubungi: +62 823-3544-8476</p>
               </div>
             </div>
             <Link

@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import type { SuratWithId } from "@/types";
 import { JENIS_SURAT_CONFIG } from "@/types";
+import { getPengaturanDesa, type PengaturanDesa } from "@/lib/actions/pengaturan.actions";
 
 const ASSETS_DIR = path.join(process.cwd(), "public", "assets");
 
@@ -64,7 +65,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     .fontSize(8)
     .fillColor("#555")
     .text(
-      "Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang, Jawa Timur | Telp: (0321) 123456",
+      "Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang, Jawa Timur | WA: +62 823-3544-8476",
       textX,
       83,
       { align: "center", width: textWidth }
@@ -86,7 +87,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     .stroke();
 }
 
-function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
+function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: PengaturanDesa) {
   const pageWidth = doc.page.width;
   const marginLeft = 72;
   const marginRight = pageWidth - 72;
@@ -102,44 +103,67 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     .fillColor("#333")
     .text(`Klitih, ${tanggalStr}`, marginRight - 200, footerY, { align: "right", width: 200 });
 
+  const jabatan = pengaturan?.jabatan_kades || "Kepala Desa Klitih";
+  const namaKades = pengaturan?.nama_kades || "Siti Ro'aini";
+
   doc
     .font("Helvetica-Bold")
     .fontSize(10)
-    .text("Kepala Desa Klitih,", marginRight - 200, footerY + 16, {
+    .text(`${jabatan},`, marginRight - 200, footerY + 16, {
       align: "right",
       width: 200,
     });
 
-  // TTD & Stempel — rata kanan
-  const ttdPath = getAssetPath("tanda-tangan-kades.png");
-  const stempelPath = getAssetPath("stempel-desa.png");
+  // Helper resolve file path
+  const resolveFilePath = (url?: string) => {
+    if (!url) return null;
+    const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
+    return path.join(process.cwd(), "public", cleanUrl);
+  };
+
+  const ttdPath = resolveFilePath(pengaturan?.url_ttd) ?? getAssetPath("tanda-tangan-kades.png");
+  const stempelPath = resolveFilePath(pengaturan?.url_stempel) ?? getAssetPath("stempel-desa.png");
 
   const ttdX = marginRight - 110;  // rata kanan dengan margin halaman
   const ttdY = footerY + 34;
 
-  if (fs.existsSync(stempelPath)) {
+  if (stempelPath && fs.existsSync(stempelPath)) {
     doc.save();
     doc.opacity(0.6);
     doc.image(stempelPath, ttdX - 30, ttdY - 10, { width: 90 });
     doc.restore();
+  } else {
+    const fallbackStempel = getAssetPath("stempel-desa.png");
+    if (fs.existsSync(fallbackStempel)) {
+      doc.save();
+      doc.opacity(0.6);
+      doc.image(fallbackStempel, ttdX - 30, ttdY - 10, { width: 90 });
+      doc.restore();
+    }
   }
-  if (fs.existsSync(ttdPath)) {
+
+  if (ttdPath && fs.existsSync(ttdPath)) {
     doc.image(ttdPath, ttdX, ttdY, { width: 110, height: 55 });
   } else {
-    doc.rect(ttdX, ttdY, 110, 50).dash(4, { space: 2 }).stroke("#aaa").undash();
-    doc.font("Helvetica").fontSize(8).fillColor("#aaa").text("[Tanda Tangan]", ttdX, ttdY + 18, { width: 110, align: "center" });
+    const fallbackTTD = getAssetPath("tanda-tangan-kades.png");
+    if (fs.existsSync(fallbackTTD)) {
+      doc.image(fallbackTTD, ttdX, ttdY, { width: 110, height: 55 });
+    } else {
+      doc.rect(ttdX, ttdY, 110, 50).dash(4, { space: 2 }).stroke("#aaa").undash();
+      doc.font("Helvetica").fontSize(8).fillColor("#aaa").text("[Tanda Tangan]", ttdX, ttdY + 18, { width: 110, align: "center" });
+    }
   }
 
   doc
     .font("Helvetica-Bold")
     .fontSize(10)
     .fillColor("#333")
-    .text("Siti Ro'aini", marginRight - 200, ttdY + 60, { align: "right", width: 200 });
+    .text(namaKades, marginRight - 200, ttdY + 60, { align: "right", width: 200 });
 
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("Kepala Desa Klitih", marginRight - 200, ttdY + 74, { align: "right", width: 200 });
+    .text(jabatan, marginRight - 200, ttdY + 74, { align: "right", width: 200 });
 
   // Garis & ID dokumen — posisi relatif dari footerY (aman, tidak pakai page.height)
   const garisY = footerY + 160;
@@ -365,6 +389,9 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
 // MAIN: Generate PDF dan return sebagai Buffer
 // ────────────────────────────────────────────────
 export async function generateSuratPDF(surat: SuratWithId): Promise<Buffer> {
+  const settingsResult = await getPengaturanDesa();
+  const pengaturan = settingsResult.success ? settingsResult.data : undefined;
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -377,8 +404,6 @@ export async function generateSuratPDF(surat: SuratWithId): Promise<Buffer> {
       },
     });
 
-
-
     const buffers: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => buffers.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
@@ -388,7 +413,7 @@ export async function generateSuratPDF(surat: SuratWithId): Promise<Buffer> {
     drawHeader(doc);
     drawNomorSurat(doc, surat, "001");
     drawBodyContent(doc, surat);
-    drawFooter(doc, surat);
+    drawFooter(doc, surat, pengaturan);
 
     doc.end();
   });

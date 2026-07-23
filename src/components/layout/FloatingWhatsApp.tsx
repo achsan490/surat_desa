@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { MessageCircle, X } from "lucide-react";
 
 export default function FloatingWhatsApp() {
+  const pathname = usePathname();
   const [tooltip, setTooltip] = useState(false);
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <div className="fixed bottom-6 right-5 z-50 flex flex-col items-end gap-2">
@@ -18,7 +22,7 @@ export default function FloatingWhatsApp() {
 
       {/* Button */}
       <a
-        href="https://wa.me/6285730403338"
+        href="https://wa.me/6282335448476"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Hubungi Kantor Desa via WhatsApp"

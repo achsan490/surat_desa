@@ -230,3 +230,51 @@ export async function deleteSurat(id: string): Promise<ActionResult> {
     return { success: false, error: "Gagal menghapus surat. Silakan coba lagi." };
   }
 }
+
+// ────────────────────────────────────────────────
+// ADMIN: Notifikasi permohonan surat pending terbaru
+// ────────────────────────────────────────────────
+export interface NotificationItem {
+  id: string;
+  nik: string;
+  nama_lengkap: string;
+  jenis_surat: string;
+  created_at: Date;
+}
+
+export async function getPendingNotifications(): Promise<
+  ActionResult<{ pendingCount: number; recentPending: NotificationItem[] }>
+> {
+  try {
+    const [pendingCount, recentPending] = await Promise.all([
+      prisma.surat.count({ where: { status: StatusSurat.PENDING } }),
+      prisma.surat.findMany({
+        where: { status: StatusSurat.PENDING },
+        select: {
+          id: true,
+          nik: true,
+          nama_lengkap: true,
+          jenis_surat: true,
+          created_at: true,
+        },
+        orderBy: { created_at: "desc" },
+        take: 5,
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        pendingCount,
+        recentPending: recentPending.map((s) => ({
+          ...s,
+          jenis_surat: s.jenis_surat.toString(),
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("[getPendingNotifications] Error:", error);
+    return { success: false, error: "Gagal mengambil data notifikasi." };
+  }
+}
+

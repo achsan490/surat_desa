@@ -1,7 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Building2, Phone, MapPin, Clock, Mail, MessageCircle, FileText, Search, Users } from "lucide-react";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/admin")) return null;
   return (
     <footer className="bg-slate-900 text-slate-300">
       <div className="container mx-auto px-4 py-12 md:py-14">
@@ -22,7 +28,7 @@ export default function Footer() {
             </p>
             {/* WA Quick Contact */}
             <a
-              href="https://wa.me/6285730403338"
+              href="https://wa.me/6282335448476"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 text-emerald-400 hover:text-emerald-300 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
@@ -34,13 +40,15 @@ export default function Footer() {
 
           {/* Layanan */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-white text-sm">Layanan Surat</h4>
-            <ul className="space-y-2 text-sm">
+            <h4 className="font-semibold text-white text-sm">Layanan Surat (12 Jenis)</h4>
+            <ul className="space-y-1.5 text-xs">
               {[
-                "Surat Keterangan Tidak Mampu (SKTM)",
-                "Surat Keterangan Kematian",
-                "Surat Keterangan Domisili",
-                "Surat Keterangan Usaha (SKU)",
+                "SKTM & Surat Kematian",
+                "Domisili & Surat Usaha (SKU)",
+                "Belum Menikah & Kelahiran",
+                "Surat Pindah & Penghasilan",
+                "Ahli Waris & Pengantar Nikah",
+                "Kepemilikan Tanah & SKCK",
               ].map((s) => (
                 <li key={s} className="text-slate-400 hover:text-slate-200 transition-colors cursor-default">
                   › {s}
@@ -90,7 +98,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-slate-400">
                 <Phone className="h-4 w-4 flex-shrink-0 text-blue-400" />
-                (0321) 123456
+                +62 823-3544-8476
               </li>
               <li className="flex items-center gap-2 text-slate-400">
                 <Mail className="h-4 w-4 flex-shrink-0 text-blue-400" />
@@ -107,17 +115,8 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
           <p>© {new Date().getFullYear()} Desa Klitih, Kab. Jombang. Hak cipta dilindungi.</p>
-          <div className="flex items-center gap-4">
-            <Link href="/kelompok" className="hover:text-slate-300 hover:underline transition-colors text-slate-400 font-medium">
-              Dibuat oleh Kelompok 27 KKN 2026
-            </Link>
-            <span className="text-slate-700">|</span>
-            <Link href="/admin/login" className="hover:text-slate-300 transition-colors">
-              Portal Admin
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

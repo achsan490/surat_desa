@@ -50,3 +50,12 @@ model Surat {
   @@index([jenis_surat])
   @@map("surat")
 }
+
+model Pengaturan {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
+
+  @@map("pengaturan")
+}
+

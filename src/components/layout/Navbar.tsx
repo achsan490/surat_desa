@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Search, Menu, X, ChevronRight, Users } from "lucide-react";
+import { Home, FileText, Search, Menu, X, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,6 @@ const navLinks = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/ajukan-surat", label: "Ajukan Surat", icon: FileText },
   { href: "/cek-status", label: "Cek Status", icon: Search },
-  { href: "/kelompok", label: "Tim KKN", icon: Users },
 ];
 
 export default function Navbar() {
