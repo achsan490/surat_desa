@@ -15,6 +15,8 @@ import {
   type TemplateSuratMap,
 } from "@/lib/actions/pengaturan.actions";
 import { JENIS_SURAT_CONFIG, type JenisSuratKey } from "@/types";
+import { PLACEHOLDER_INFO } from "@/lib/pdf/placeholderInfo";
+
 import {
   Settings,
   Upload,
@@ -31,6 +33,9 @@ import {
   ScrollText,
   FileCheck2,
   AlertCircle,
+  BookOpen,
+  Code2,
+  ChevronDown,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -47,7 +52,112 @@ function getFileIcon(url: string) {
   return "FILE";
 }
 
+// ─── Komponen Panduan Placeholder ─────────────────────────────────────────────
+function PlaceholderGuide() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Card className="border border-blue-100 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 shadow-sm">
+      <CardContent className="p-0">
+        {/* Toggle Header */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between p-5 text-left hover:bg-blue-50/80 transition-colors rounded-xl"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
+              <BookOpen className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-slate-900">Panduan Placeholder Template Word</p>
+              <p className="text-xs text-slate-500">
+                Daftar kode yang bisa ditulis di file .docx agar terisi otomatis
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`h-4 w-4 text-slate-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {/* Collapsible Content */}
+        {open && (
+          <div className="px-5 pb-5 space-y-5 border-t border-blue-100/80 pt-5">
+            {/* Cara pakai */}
+            <div className="rounded-xl bg-white border border-blue-100 p-4 space-y-2">
+              <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Code2 className="h-3.5 w-3.5 text-blue-600" />
+                Cara Penggunaan
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Tulis placeholder di dalam file Word <span className="font-mono bg-slate-100 px-1 rounded">.docx</span> tepat 
+                seperti format di bawah (termasuk kurung kurawal). Saat surat diunduh, sistem akan 
+                mengganti placeholder dengan data warga secara otomatis.
+              </p>
+              <div className="bg-slate-50 rounded-lg p-3 font-mono text-xs text-slate-700 border border-slate-200">
+                Yang bertanda tangan di bawah ini menerangkan bahwa warga bernama{" "}
+                <span className="bg-blue-100 text-blue-800 px-1 rounded">{"{nama_lengkap}"}</span> dengan NIK{" "}
+                <span className="bg-blue-100 text-blue-800 px-1 rounded">{"{nik}"}</span> ...
+              </div>
+            </div>
+
+            {/* Placeholder Universal */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-700">Placeholder Universal (semua jenis surat)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PLACEHOLDER_INFO.universal.map((p) => (
+                  <div
+                    key={p.key}
+                    className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-lg px-3 py-2"
+                  >
+                    <code className="text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                      {p.key}
+                    </code>
+                    <span className="text-xs text-slate-600 truncate">{p.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Placeholder per Jenis Surat */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-slate-700">Placeholder Tambahan per Jenis Surat</p>
+              <div className="space-y-2">
+                {Object.entries(PLACEHOLDER_INFO.perJenis).map(([jenis, fields]) => (
+                  <details key={jenis} className="group bg-white border border-slate-200 rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-3 py-2 cursor-pointer text-xs font-semibold text-slate-700 hover:bg-slate-50 list-none">
+                      <span className="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded text-[10px]">
+                        {jenis}
+                      </span>
+                      <ChevronDown className="h-3 w-3 text-slate-400 group-open:rotate-180 transition-transform" />
+                    </summary>
+                    <div className="px-3 pb-3 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 border-t border-slate-100">
+                      {(fields as { key: string; desc: string }[]).map((f) => (
+                        <div
+                          key={f.key}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 bg-slate-50"
+                        >
+                          <code className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded flex-shrink-0">
+                            {f.key}
+                          </code>
+                          <span className="text-[10px] text-slate-600 truncate">{f.desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function PengaturanPage() {
+
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
@@ -654,6 +764,9 @@ export default function PengaturanPage() {
             );
           })}
         </div>
+
+        {/* ─── Panduan Placeholder ─────────────────────────────────────────── */}
+        <PlaceholderGuide />
       </div>
     </div>
   );
