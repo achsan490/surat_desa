@@ -144,31 +144,78 @@ function patchXmlWithData(xml: string, data: Record<string, string>): string {
 
     if (!dotPattern.test(plainText)) return para;
 
-    // Tentukan nilai yang akan diisikan berdasarkan label
+    // Tentukan nilai yang akan diisikan berdasarkan label dalam teks paragraf
     let valueToInsert = "";
 
-    if (/nama\s*[:：]/i.test(plainText)) {
+    // ── Check specific names first ──
+    if (/nama\s*(almarhum|jenazah)/i.test(plainText)) {
+      valueToInsert = esc(data.nama_almarhum ?? "");
+    } else if (/nama\s*pewaris/i.test(plainText)) {
+      valueToInsert = esc(data.nama_pewaris ?? "");
+    } else if (/nama\s*bayi/i.test(plainText)) {
+      valueToInsert = esc(data.nama_bayi ?? "");
+    } else if (/nama\s*(pasangan|calon)/i.test(plainText)) {
+      valueToInsert = esc(data.nama_pasangan ?? "");
+    } else if (/nik\s*(pasangan|calon)/i.test(plainText)) {
+      valueToInsert = esc(data.nik_pasangan ?? "");
+    } else if (/nama\s*ayah/i.test(plainText)) {
+      valueToInsert = esc(data.nama_ayah ?? "");
+    } else if (/nama\s*ibu/i.test(plainText)) {
+      valueToInsert = esc(data.nama_ibu ?? "");
+    } else if (/nama\s*usaha/i.test(plainText)) {
+      valueToInsert = esc(data.nama_usaha ?? "");
+    } else if (/jenis\s*usaha/i.test(plainText)) {
+      valueToInsert = esc(data.jenis_usaha ?? "");
+    } else if (/alamat\s*usaha/i.test(plainText)) {
+      valueToInsert = esc(data.alamat_usaha ?? "");
+    } else if (/alamat\s*tujuan/i.test(plainText)) {
+      valueToInsert = esc(data.alamat_tujuan ?? "");
+    } else if (/alamat\s*asal/i.test(plainText)) {
+      valueToInsert = esc(data.alamat_asal ?? "");
+    } else if (/alasan\s*pindah/i.test(plainText)) {
+      valueToInsert = esc(data.alasan_pindah ?? "");
+    } else if (/(jumlah|banyaknya?)\s*pengikut/i.test(plainText)) {
+      valueToInsert = esc(data.jumlah_pengikut ?? "");
+    } else if (/nominal|penghasilan|gaji/i.test(plainText)) {
+      valueToInsert = esc(data.nominal_penghasilan ? `Rp ${data.nominal_penghasilan}` : "");
+    } else if (/sumber\s*penghasilan|pekerjaan/i.test(plainText)) {
+      valueToInsert = esc(data.sumber_penghasilan ?? "-");
+    } else if (/ahli\s*waris/i.test(plainText)) {
+      valueToInsert = esc(data.jumlah_ahli_waris ?? "");
+    } else if (/(tempat|rencana)\s*(nikah|akad|kua)/i.test(plainText)) {
+      valueToInsert = esc(data.tempat_nikah ?? "");
+    } else if (/sertifikat|girik|petok/i.test(plainText)) {
+      valueToInsert = esc(data.nomor_sertifikat ?? "");
+    } else if (/luas\s*tanah/i.test(plainText)) {
+      valueToInsert = esc(data.luas_tanah ?? "");
+    } else if (/alamat\s*tanah|lokasi\s*tanah/i.test(plainText)) {
+      valueToInsert = esc(data.alamat_tanah ?? "");
+    }
+    // ── Check general fields ──
+    else if (/nama\s*[:：]/i.test(plainText)) {
       valueToInsert = esc(data.nama_lengkap);
     } else if (/\bnik\b/i.test(plainText)) {
       valueToInsert = esc(data.nik);
     } else if (/no\.?\s*kk/i.test(plainText)) {
       valueToInsert = "-";
-    } else if (/no\.?\s*(hp|hp|telepon|wa|whatsapp)/i.test(plainText)) {
+    } else if (/no\.?\s*(hp|telepon|wa|whatsapp)/i.test(plainText)) {
       valueToInsert = esc(data.no_whatsapp);
-    } else if (/keperluan/i.test(plainText)) {
+    } else if (/keperluan|tujuan/i.test(plainText)) {
       valueToInsert = esc(data.keperluan ?? data.tujuan_surat ?? "");
-    } else if (/pekerjaan/i.test(plainText)) {
-      valueToInsert = esc(data.sumber_penghasilan ?? "-");
     } else if (/alamat/i.test(plainText)) {
       valueToInsert = "Desa Klitih, Kecamatan Plandaan, Kab. Jombang";
-    } else if (/tanggal/i.test(plainText) && /meninggal/i.test(plainText)) {
+    } else if (/tanggal\s*meninggal/i.test(plainText)) {
       valueToInsert = esc(data.tanggal_meninggal ?? "-");
+    } else if (/tempat\s*meninggal/i.test(plainText)) {
+      valueToInsert = esc(data.tempat_meninggal ?? "-");
+    } else if (/tanggal\s*lahir/i.test(plainText)) {
+      valueToInsert = esc(data.tanggal_lahir ?? "-");
+    } else if (/tempat\s*lahir/i.test(plainText)) {
+      valueToInsert = esc(data.tempat_lahir ?? "-");
     } else if (/tanggal/i.test(plainText)) {
-      valueToInsert = esc(data.tanggal ?? data.tanggal_lahir ?? "");
-    } else if (/tempat/i.test(plainText)) {
-      valueToInsert = esc(data.tempat_meninggal ?? data.tempat_lahir ?? "-");
+      valueToInsert = esc(data.tanggal ?? "");
     } else {
-      return para; // tidak tahu mau diisi apa, biarkan
+      return para; // tidak cocok dengan label manapun, biarkan
     }
 
     if (!valueToInsert) return para;
