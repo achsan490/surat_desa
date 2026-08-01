@@ -72,3 +72,70 @@ export async function updatePengaturanDesa(
     return { success: false, error: "Gagal menyimpan pengaturan. Silakan coba lagi." };
   }
 }
+
+// ─── Template Surat ────────────────────────────────────────────────────────────
+
+export interface TemplateSuratMap {
+  [jenisSurat: string]: string; // key: JenisSuratKey, value: url file
+}
+
+/**
+ * Ambil semua template surat yang sudah diunggah (key prefix "template_")
+ */
+export async function getTemplateSurat(): Promise<ActionResult<TemplateSuratMap>> {
+  try {
+    const list = await prisma.pengaturan.findMany({
+      where: { key: { startsWith: "template_" } },
+    });
+
+    const map: TemplateSuratMap = {};
+    list.forEach((item) => {
+      const jenisSurat = item.key.replace("template_", "");
+      map[jenisSurat] = item.value;
+    });
+
+    return { success: true, data: map };
+  } catch (error) {
+    console.error("[getTemplateSurat] Error:", error);
+    return { success: false, error: "Gagal mengambil data template surat." };
+  }
+}
+
+/**
+ * Simpan / update URL template untuk satu jenis surat
+ */
+export async function updateTemplateSurat(
+  jenisSurat: string,
+  url: string
+): Promise<ActionResult> {
+  try {
+    const key = `template_${jenisSurat}`;
+    await prisma.pengaturan.upsert({
+      where: { key },
+      update: { value: url },
+      create: { key, value: url },
+    });
+
+    revalidatePath("/admin/dashboard/pengaturan");
+    return { success: true, data: undefined, message: "Template berhasil disimpan." };
+  } catch (error) {
+    console.error("[updateTemplateSurat] Error:", error);
+    return { success: false, error: "Gagal menyimpan template. Silakan coba lagi." };
+  }
+}
+
+/**
+ * Hapus URL template untuk satu jenis surat dari database
+ */
+export async function deleteTemplateSurat(jenisSurat: string): Promise<ActionResult> {
+  try {
+    const key = `template_${jenisSurat}`;
+    await prisma.pengaturan.deleteMany({ where: { key } });
+
+    revalidatePath("/admin/dashboard/pengaturan");
+    return { success: true, data: undefined, message: "Template berhasil dihapus." };
+  } catch (error) {
+    console.error("[deleteTemplateSurat] Error:", error);
+    return { success: false, error: "Gagal menghapus template. Silakan coba lagi." };
+  }
+}

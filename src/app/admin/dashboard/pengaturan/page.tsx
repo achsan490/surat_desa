@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getPengaturanDesa, updatePengaturanDesa } from "@/lib/actions/pengaturan.actions";
+import { Badge } from "@/components/ui/badge";
+import {
+  getPengaturanDesa,
+  updatePengaturanDesa,
+  getTemplateSurat,
+  type TemplateSuratMap,
+} from "@/lib/actions/pengaturan.actions";
+import { JENIS_SURAT_CONFIG, type JenisSuratKey } from "@/types";
 import {
   Settings,
   Upload,
@@ -18,32 +25,63 @@ import {
   FileImage,
   Loader2,
   RefreshCw,
+  FileText,
+  Download,
+  Trash2,
+  ScrollText,
+  FileCheck2,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
+
+// ─── Daftar jenis surat untuk template grid ───────────────────────────────────
+const JENIS_SURAT_LIST = Object.entries(JENIS_SURAT_CONFIG).map(([key, val]) => ({
+  key: key as JenisSuratKey,
+  label: val.label,
+}));
+
+// ─── Helper: ikon per jenis surat ────────────────────────────────────────────
+function getFileIcon(url: string) {
+  if (url.endsWith(".pdf")) return "PDF";
+  if (url.endsWith(".docx") || url.endsWith(".doc")) return "DOCX";
+  return "FILE";
+}
 
 export default function PengaturanPage() {
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
+  // ── Pengaturan TTD & Stempel ──────────────────────────────────────────────
   const [namaKades, setNamaKades] = useState("");
   const [jabatanKades, setJabatanKades] = useState("");
   const [urlTtd, setUrlTtd] = useState("");
   const [urlStempel, setUrlStempel] = useState("");
-
   const [uploadingTtd, setUploadingTtd] = useState(false);
   const [uploadingStempel, setUploadingStempel] = useState(false);
+
+  // ── Template Surat ────────────────────────────────────────────────────────
+  const [templateMap, setTemplateMap] = useState<TemplateSuratMap>({});
+  const [uploadingTemplate, setUploadingTemplate] = useState<Record<string, boolean>>({});
+  const [deletingTemplate, setDeletingTemplate] = useState<Record<string, boolean>>({});
 
   const isMountedRef = useRef(true);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    const res = await getPengaturanDesa();
+    const [settingsRes, templateRes] = await Promise.all([
+      getPengaturanDesa(),
+      getTemplateSurat(),
+    ]);
+
     if (isMountedRef.current) {
-      if (res.success && res.data) {
-        setNamaKades(res.data.nama_kades);
-        setJabatanKades(res.data.jabatan_kades);
-        setUrlTtd(res.data.url_ttd);
-        setUrlStempel(res.data.url_stempel);
+      if (settingsRes.success && settingsRes.data) {
+        setNamaKades(settingsRes.data.nama_kades);
+        setJabatanKades(settingsRes.data.jabatan_kades);
+        setUrlTtd(settingsRes.data.url_ttd);
+        setUrlStempel(settingsRes.data.url_stempel);
+      }
+      if (templateRes.success && templateRes.data) {
+        setTemplateMap(templateRes.data);
       }
       setLoading(false);
     }
@@ -57,10 +95,8 @@ export default function PengaturanPage() {
     };
   }, [loadSettings]);
 
-  const handleFileUpload = async (
-    file: File,
-    type: "ttd" | "stempel"
-  ) => {
+  // ── Upload TTD / Stempel ──────────────────────────────────────────────────
+  const handleFileUpload = async (file: File, type: "ttd" | "stempel") => {
     if (type === "ttd") setUploadingTtd(true);
     else setUploadingStempel(true);
 
@@ -68,11 +104,7 @@ export default function PengaturanPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) {
         const err = await res.json();
         toast.error(err.error ?? "Gagal mengunggah gambar");
@@ -95,6 +127,61 @@ export default function PengaturanPage() {
     }
   };
 
+  // ── Upload Template Surat ─────────────────────────────────────────────────
+  const handleTemplateUpload = async (file: File, jenisSurat: string) => {
+    setUploadingTemplate((prev) => ({ ...prev, [jenisSurat]: true }));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("jenisSurat", jenisSurat);
+
+      const res = await fetch("/api/upload-template", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Gagal mengunggah template");
+        return;
+      }
+
+      setTemplateMap((prev) => ({ ...prev, [jenisSurat]: data.url }));
+      toast.success("Template surat berhasil diunggah!");
+    } catch {
+      toast.error("Terjadi kesalahan saat mengunggah template.");
+    } finally {
+      setUploadingTemplate((prev) => ({ ...prev, [jenisSurat]: false }));
+    }
+  };
+
+  // ── Hapus Template Surat ──────────────────────────────────────────────────
+  const handleTemplateDelete = async (jenisSurat: string) => {
+    setDeletingTemplate((prev) => ({ ...prev, [jenisSurat]: true }));
+    try {
+      const res = await fetch("/api/delete-template", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jenisSurat }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Gagal menghapus template");
+        return;
+      }
+
+      setTemplateMap((prev) => {
+        const next = { ...prev };
+        delete next[jenisSurat];
+        return next;
+      });
+      toast.success("Template berhasil dihapus.");
+    } catch {
+      toast.error("Terjadi kesalahan saat menghapus template.");
+    } finally {
+      setDeletingTemplate((prev) => ({ ...prev, [jenisSurat]: false }));
+    }
+  };
+
+  // ── Simpan Pengaturan TTD & Stempel ──────────────────────────────────────
   const handleSave = () => {
     if (!namaKades.trim()) {
       toast.error("Nama penandatangan tidak boleh kosong.");
@@ -121,9 +208,10 @@ export default function PengaturanPage() {
     });
   };
 
+  // ─── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-6">
+      <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96" />
         <Card className="p-6 space-y-4">
@@ -131,13 +219,19 @@ export default function PengaturanPage() {
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-32 w-full" />
         </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 w-full rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
-      {/* Header */}
+    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-10">
+
+      {/* ─── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
@@ -145,9 +239,9 @@ export default function PengaturanPage() {
               <Settings className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Pengaturan TTD & Stempel</h1>
+              <h1 className="text-2xl font-bold text-slate-900">Pengaturan Surat</h1>
               <p className="text-sm text-slate-500">
-                Atur identitas penandatangan dan unggah gambar TTD & Stempel resmi untuk PDF surat
+                Kelola TTD, stempel, identitas penandatangan, dan template surat resmi desa
               </p>
             </div>
           </div>
@@ -164,9 +258,8 @@ export default function PengaturanPage() {
         </Button>
       </div>
 
-      {/* Main Form */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Identitas Penandatangan */}
+      {/* ─── Identitas Penandatangan ──────────────────────────────────────────── */}
+      <div className="space-y-6">
         <Card className="border border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4">
             <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -208,7 +301,7 @@ export default function PengaturanPage() {
           </CardContent>
         </Card>
 
-        {/* Upload TTD & Stempel */}
+        {/* ─── Upload TTD & Stempel ─────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card Tanda Tangan */}
           <Card className="border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -223,7 +316,6 @@ export default function PengaturanPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
-                {/* Preview Box */}
                 <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/80 flex flex-col items-center justify-center min-h-[160px]">
                   {urlTtd ? (
                     <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-lg border border-slate-200 p-2 shadow-inner">
@@ -244,14 +336,12 @@ export default function PengaturanPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Upload Button */}
                 <div>
                   <input
                     type="file"
                     id="ttdFileInput"
                     accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
+                    style={{ display: "none" }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) handleFileUpload(file, "ttd");
@@ -294,7 +384,6 @@ export default function PengaturanPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
-                {/* Preview Box */}
                 <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/80 flex flex-col items-center justify-center min-h-[160px]">
                   {urlStempel ? (
                     <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-lg border border-slate-200 p-2 shadow-inner">
@@ -315,14 +404,12 @@ export default function PengaturanPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Upload Button */}
                 <div>
                   <input
                     type="file"
                     id="stempelFileInput"
                     accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
+                    style={{ display: "none" }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) handleFileUpload(file, "stempel");
@@ -385,6 +472,188 @@ export default function PengaturanPage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ─── Template Surat Resmi ─────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">
+              <ScrollText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Template Surat Resmi</h2>
+              <p className="text-sm text-slate-500">
+                Unggah file template (.docx / .pdf) per jenis surat sebagai acuan format surat resmi desa
+              </p>
+            </div>
+          </div>
+
+          {/* Stats badge */}
+          <div className="hidden sm:flex items-center gap-2 mt-1">
+            <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 gap-1.5">
+              <FileCheck2 className="h-3 w-3" />
+              {Object.keys(templateMap).length} / {JENIS_SURAT_LIST.length} diunggah
+            </Badge>
+          </div>
+        </div>
+
+        {/* Info banner */}
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800">
+            Template ini berfungsi sebagai <strong>panduan format resmi</strong> yang dapat diunduh oleh admin.
+            Format yang diterima: <strong>DOCX</strong> (Word) dan <strong>PDF</strong>, maksimal 10 MB per file.
+          </p>
+        </div>
+
+        {/* Template Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {JENIS_SURAT_LIST.map(({ key, label }) => {
+            const templateUrl = templateMap[key];
+            const isUploading = !!uploadingTemplate[key];
+            const isDeleting = !!deletingTemplate[key];
+            const hasTemplate = !!templateUrl;
+            const fileType = hasTemplate ? getFileIcon(templateUrl) : null;
+
+            return (
+              <Card
+                key={key}
+                className={`border shadow-sm transition-all hover:shadow-md ${
+                  hasTemplate
+                    ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50/40"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <CardContent className="p-4 space-y-3">
+                  {/* Header card */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div
+                        className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold ${
+                          hasTemplate
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {hasTemplate ? (
+                          fileType === "PDF" ? (
+                            <span className="text-[10px]">PDF</span>
+                          ) : (
+                            <span className="text-[10px]">DOC</span>
+                          )
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-800 leading-tight line-clamp-2">
+                          {label}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{key}</p>
+                      </div>
+                    </div>
+
+                    {/* Status badge */}
+                    {hasTemplate ? (
+                      <Badge className="flex-shrink-0 bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-[10px] px-1.5 py-0.5">
+                        ✓ Ada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="flex-shrink-0 text-slate-400 border-slate-200 text-[10px] px-1.5 py-0.5">
+                        Kosong
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-slate-100" />
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {/* Upload */}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        id={`template-input-${key}`}
+                        accept=".docx,.doc,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleTemplateUpload(file, key);
+                          // reset input agar bisa upload ulang file sama
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isUploading || isDeleting}
+                        onClick={() =>
+                          document.getElementById(`template-input-${key}`)?.click()
+                        }
+                        className="w-full gap-1.5 text-xs border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Mengunggah...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-3 w-3" />
+                            {hasTemplate ? "Ganti" : "Upload"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Download — hanya jika ada template */}
+                    {hasTemplate && (
+                      <a
+                        href={templateUrl}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                          title="Unduh template"
+                        >
+                          <Download className="h-3 w-3" />
+                        </Button>
+                      </a>
+                    )}
+
+                    {/* Delete — hanya jika ada template */}
+                    {hasTemplate && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isDeleting || isUploading}
+                        onClick={() => handleTemplateDelete(key)}
+                        className="gap-1.5 text-xs border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        title="Hapus template"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

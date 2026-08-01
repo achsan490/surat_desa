@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { Metadata } from "next";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -309,17 +309,17 @@ export default function AjukanSuratPage() {
 
               {/* Upload Berkas */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">
+                <p className="text-sm font-medium text-slate-700">
                   <Upload className="h-3.5 w-3.5 inline mr-1.5 text-slate-500" />
                   Upload Berkas Syarat (KTP / KK)
-                </Label>
+                </p>
                 <div className="relative">
                   <input
                     type="file"
                     id="fileUpload"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={handleFileChange}
-                    className="hidden"
+                    style={{ display: "none" }}
                   />
                   <label
                     htmlFor="fileUpload"
