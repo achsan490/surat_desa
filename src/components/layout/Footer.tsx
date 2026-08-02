@@ -28,7 +28,7 @@ export default function Footer() {
             </p>
             {/* WA Quick Contact */}
             <a
-              href="https://wa.me/6285700000000"
+              href="https://wa.me/6282335448476"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 text-emerald-400 hover:text-emerald-300 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
@@ -98,7 +98,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-slate-400">
                 <Phone className="h-4 w-4 flex-shrink-0 text-blue-400" />
-                +62 857-0000-0000
+                +62 823-3544-8476
               </li>
               <li className="flex items-center gap-2 text-slate-400">
                 <Mail className="h-4 w-4 flex-shrink-0 text-blue-400" />

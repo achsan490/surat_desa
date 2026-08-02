@@ -22,7 +22,7 @@ export default function FloatingWhatsApp() {
 
       {/* Button */}
       <a
-        href="https://wa.me/6285700000000"
+        href="https://wa.me/6282335448476"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Hubungi Kantor Desa via WhatsApp"

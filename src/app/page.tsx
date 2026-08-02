@@ -496,7 +496,7 @@ export default function HomePage() {
             <p className="text-sm text-slate-500">
               Masih ada pertanyaan?{" "}
               <a
-                href="https://wa.me/6285700000000"
+                href="https://wa.me/6282335448476"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline font-semibold"
@@ -529,7 +529,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h3 className="text-lg md:text-xl font-bold">Butuh Bantuan?</h3>
-                <p className="text-blue-200 text-sm mt-0.5">Hubungi: +62 857-0000-0000</p>
+                <p className="text-blue-200 text-sm mt-0.5">Hubungi: +62 823-3544-8476</p>
               </div>
             </div>
             <Link

@@ -14,8 +14,6 @@ export const metadata: Metadata = {
 const DPL = {
   nama: "Fitri Umardiyah, M. Pd.",
   peran: "Dosen Pembimbing Lapangan (DPL)",
-  wa: "085730403338",
-  waLink: "https://wa.me/6285730403338",
   foto: "/dpl.jpeg",
 };
 
@@ -215,21 +213,6 @@ export default function KelompokPage() {
                     {DPL.nama}
                   </h2>
                   <p className="text-slate-500 text-sm mt-0.5">{DPL.peran}</p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start pt-1">
-                  <a
-                    href={DPL.waLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      buttonVariants({ size: "sm" }),
-                      "bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition-colors"
-                    )}
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Hubungi DPL (WhatsApp)
-                  </a>
                 </div>
               </div>
             </CardContent>
