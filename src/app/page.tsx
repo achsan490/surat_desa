@@ -496,7 +496,7 @@ export default function HomePage() {
             <p className="text-sm text-slate-500">
               Masih ada pertanyaan?{" "}
               <a
-                href="https://wa.me/6282335448476"
+                href="https://wa.me/6285700000000"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline font-semibold"
