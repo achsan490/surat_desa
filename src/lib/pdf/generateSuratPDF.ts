@@ -65,7 +65,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     .fontSize(8)
     .fillColor("#555")
     .text(
-      "Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang, Jawa Timur | WA: +62 823-3544-8476",
+      "Jl. Raya Klitih No. 1, Kec. Plandaan, Kab. Jombang, Jawa Timur 61456",
       textX,
       83,
       { align: "center", width: textWidth }
