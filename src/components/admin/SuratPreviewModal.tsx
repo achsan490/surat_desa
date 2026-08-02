@@ -31,10 +31,11 @@ export function SuratPreviewModal({
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   const pdfUrl = `/api/generate-pdf?id=${suratId}`;
+  const downloadUrl = `/api/generate-pdf?id=${suratId}&download=true`;
 
   const handleDownload = () => {
     const link = document.createElement("a");
-    link.href = pdfUrl;
+    link.href = downloadUrl;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     document.body.appendChild(link);

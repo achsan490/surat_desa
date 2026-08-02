@@ -26,15 +26,22 @@ const FONT = "Times New Roman";
 const hasLogo = fs.existsSync(LOGO_PATH);
 const logoBuffer = hasLogo ? fs.readFileSync(LOGO_PATH) : null;
 
-const TTD_PATH = path.join(process.cwd(), "public", "assets", "tanda-tangan-kades.png");
-const STEMPEL_PATH = path.join(process.cwd(), "public", "assets", "stempel-desa.png");
-const ttdBuffer = fs.existsSync(TTD_PATH) ? fs.readFileSync(TTD_PATH) : null;
-const stempelBuffer = fs.existsSync(STEMPEL_PATH) ? fs.readFileSync(STEMPEL_PATH) : null;
+const COMBINED_PATH = path.join(process.cwd(), "public", "assets", "ttd-dan-stempel.png");
+const combinedBuffer = fs.existsSync(COMBINED_PATH) ? fs.readFileSync(COMBINED_PATH) : null;
 
 interface FieldDef {
   key: string;
   label: string;
 }
+
+const noBorders = {
+  top: { style: BorderStyle.NONE, size: 0, color: "auto" },
+  bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
+  left: { style: BorderStyle.NONE, size: 0, color: "auto" },
+  right: { style: BorderStyle.NONE, size: 0, color: "auto" },
+  insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "auto" },
+  insideVertical: { style: BorderStyle.NONE, size: 0, color: "auto" },
+};
 
 function createTemplateDoc(
   title: string,
@@ -96,12 +103,7 @@ function createTemplateDoc(
   const kopLogoCell = new TableCell({
     width: { size: 1600, type: WidthType.DXA },
     verticalAlign: VerticalAlign.CENTER,
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-    },
+    borders: noBorders,
     children: [
       new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -124,12 +126,7 @@ function createTemplateDoc(
   const kopTextCell = new TableCell({
     width: { size: 7400, type: WidthType.DXA },
     verticalAlign: VerticalAlign.CENTER,
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-    },
+    borders: noBorders,
     children: kopTextParagraphs,
   });
 
@@ -140,6 +137,7 @@ function createTemplateDoc(
       }),
     ],
     width: { size: 9000, type: WidthType.DXA },
+    borders: noBorders,
   });
 
   // Garis Bawah Kop Surat (Double Line Border)
@@ -212,12 +210,7 @@ function createTemplateDoc(
         children: [
           new TableCell({
             width: { size: 3000, type: WidthType.DXA },
-            borders: {
-              top: { style: BorderStyle.NONE },
-              bottom: { style: BorderStyle.NONE },
-              left: { style: BorderStyle.NONE },
-              right: { style: BorderStyle.NONE },
-            },
+            borders: noBorders,
             children: [
               new Paragraph({
                 spacing: { after: 60 },
@@ -229,12 +222,7 @@ function createTemplateDoc(
           }),
           new TableCell({
             width: { size: 400, type: WidthType.DXA },
-            borders: {
-              top: { style: BorderStyle.NONE },
-              bottom: { style: BorderStyle.NONE },
-              left: { style: BorderStyle.NONE },
-              right: { style: BorderStyle.NONE },
-            },
+            borders: noBorders,
             children: [
               new Paragraph({
                 spacing: { after: 60 },
@@ -244,12 +232,7 @@ function createTemplateDoc(
           }),
           new TableCell({
             width: { size: 5600, type: WidthType.DXA },
-            borders: {
-              top: { style: BorderStyle.NONE },
-              bottom: { style: BorderStyle.NONE },
-              left: { style: BorderStyle.NONE },
-              right: { style: BorderStyle.NONE },
-            },
+            borders: noBorders,
             children: [
               new Paragraph({
                 spacing: { after: 60 },
@@ -266,6 +249,7 @@ function createTemplateDoc(
   const identityTable = new Table({
     rows: tableRows,
     width: { size: 9000, type: WidthType.DXA },
+    borders: noBorders,
   });
 
   // Isi Surat
@@ -294,7 +278,7 @@ function createTemplateDoc(
     ],
   });
 
-  // Tanda Tangan Rata Kanan
+  // Tanda Tangan Rata Kanan (Dengan Stempel Menimpa TTD)
   const signatureParagraphs = [
     new Paragraph({
       alignment: AlignmentType.RIGHT,
@@ -322,32 +306,18 @@ function createTemplateDoc(
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       spacing: { before: 20, after: 20 },
-      children: [
-        ...(stempelBuffer
-          ? [
-              new ImageRun({
-                data: stempelBuffer,
-                transformation: {
-                  width: 90,
-                  height: 90,
-                },
-                type: "png",
-              }),
-            ]
-          : []),
-        ...(ttdBuffer
-          ? [
-              new ImageRun({
-                data: ttdBuffer,
-                transformation: {
-                  width: 130,
-                  height: 65,
-                },
-                type: "png",
-              }),
-            ]
-          : []),
-      ],
+      children: combinedBuffer
+        ? [
+            new ImageRun({
+              data: combinedBuffer,
+              transformation: {
+                width: 175,
+                height: 85,
+              },
+              type: "png",
+            }),
+          ]
+        : [],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
@@ -509,15 +479,15 @@ const TEMPLATE_DEFINITIONS: Array<{
 ];
 
 async function main() {
-  console.log("Re-generating 12 official DOCX templates WITH LOGO for Desa Klitih...");
+  console.log("Re-generating 12 official DOCX templates for Desa Klitih...");
   for (const def of TEMPLATE_DEFINITIONS) {
     const doc = createTemplateDoc(def.title, def.extraFields, def.body);
     const buffer = await Packer.toBuffer(doc);
     const filePath = path.join(OUTPUT_DIR, def.filename);
     fs.writeFileSync(filePath, buffer);
-    console.log(`✓ Generated with Logo: ${def.filename}`);
+    console.log(`✓ Generated: ${def.filename}`);
   }
-  console.log("All templates WITH LOGO successfully updated in public/templates!");
+  console.log("All templates successfully created in public/templates!");
 }
 
 main().catch(console.error);
