@@ -3,8 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +14,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File tidak ditemukan." }, { status: 400 });
     }
 
+    const mimeType = (file.type || "").toLowerCase();
+    const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|heic|heif|webp)$/i.test(file.name);
+    const isPdf = mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
     // Validasi tipe file
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!isImage && !isPdf) {
       return NextResponse.json(
-        { error: "Tipe file tidak diizinkan. Gunakan JPG, PNG, WebP, atau PDF." },
+        { error: "Tipe file tidak diizinkan. Gunakan foto JPG, PNG, WebP, atau dokumen PDF." },
         { status: 415 }
       );
     }
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Validasi ukuran file
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json(
-        { error: "Ukuran file maksimal 5 MB." },
+        { error: "Ukuran file terlalu besar (maksimal 10 MB)." },
         { status: 413 }
       );
     }
@@ -34,7 +37,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const ext = path.extname(file.name) || ".png";
+    const rawExt = path.extname(file.name).toLowerCase();
+    const ext = rawExt ? rawExt : isPdf ? ".pdf" : ".jpg";
     const uniqueName = `${uuidv4()}${ext}`;
 
     // Coba simpan ke sistem berkas lokal
@@ -51,9 +55,9 @@ export async function POST(request: NextRequest) {
     } catch (fsErr) {
       console.warn("[upload] Storage lokal ditolak/read-only (lingkungan Vercel/Serverless), beralih ke Base64 Data URL:", fsErr);
       // Fallback otomatis untuk Vercel / Serverless (Read-only filesystem)
-      const mimeType = file.type || "image/png";
+      const finalMime = mimeType || (isPdf ? "application/pdf" : "image/jpeg");
       const base64Data = buffer.toString("base64");
-      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+      const dataUrl = `data:${finalMime};base64,${base64Data}`;
 
       return NextResponse.json(
         { url: dataUrl, filename: uniqueName },

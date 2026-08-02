@@ -47,16 +47,23 @@ export default function AjukanSuratPage() {
     setDataKustom({}); // Reset dynamic fields
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Ukuran file maksimal 5 MB");
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+
+    let finalFile = rawFile;
+    if (rawFile.type.startsWith("image/") || /\.(jpg|jpeg|png|heic|heif|webp)$/i.test(rawFile.name)) {
+      finalFile = await compressImage(rawFile);
+    }
+
+    if (finalFile.size > 10 * 1024 * 1024) {
+      toast.error("Ukuran file terlalu besar (maksimal 10 MB)");
       return;
     }
-    setUploadFile(file);
-    if (file.type.startsWith("image/")) {
-      setUploadPreview(URL.createObjectURL(file));
+
+    setUploadFile(finalFile);
+    if (finalFile.type.startsWith("image/")) {
+      setUploadPreview(URL.createObjectURL(finalFile));
     } else {
       setUploadPreview("");
     }
