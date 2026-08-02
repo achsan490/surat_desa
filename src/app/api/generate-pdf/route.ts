@@ -9,6 +9,8 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
+  const formatParam = searchParams.get("format");
+  const isDownload = searchParams.get("download") === "true";
 
   // ── Guard: ID harus ada
   if (!id) {
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // ── Guard: hanya surat APPROVED yang bisa diunduh
+  // ── Guard: hanya surat APPROVED yang bisa diunduh/dipratinjau
   if (surat.status !== "APPROVED") {
     return NextResponse.json(
       {
@@ -47,41 +49,34 @@ export async function GET(request: NextRequest) {
 
   const safeNama = surat.nama_lengkap.replace(/[^a-zA-Z0-9]/g, "_");
 
-  const isDownload = searchParams.get("download") === "true";
-  const dispositionType = isDownload ? "attachment" : "inline";
+  // ── 1. Jika pengguna meminta format DOCX secara khusus ────────────────────
+  if (formatParam === "docx") {
+    try {
+      const templateResult = await generateFromTemplate(suratData);
+      if (templateResult) {
+        const { buffer, ext } = templateResult;
+        const filename = `Surat_${surat.jenis_surat}_${safeNama}.${ext}`;
 
-  // ── 1. Coba generate dari template yang diupload admin ──────────────────
-  try {
-    const templateResult = await generateFromTemplate(suratData);
-
-    if (templateResult) {
-      const { buffer, ext } = templateResult;
-      const contentType = ext === "docx" ? DOCX_MIME : "application/pdf";
-      const filename = `Surat_${surat.jenis_surat}_${safeNama}.${ext}`;
-
-      console.log(`[generate-pdf] Menggunakan template: ${surat.jenis_surat}.${ext}`);
-
-      return new NextResponse(new Uint8Array(buffer), {
-        status: 200,
-        headers: {
-          "Content-Type": contentType,
-          "Content-Disposition": `${dispositionType}; filename="${filename}"`,
-          "Content-Length": buffer.length.toString(),
-          "Cache-Control": "no-store",
-        },
-      });
+        return new NextResponse(new Uint8Array(buffer), {
+          status: 200,
+          headers: {
+            "Content-Type": DOCX_MIME,
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Length": buffer.length.toString(),
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+    } catch (templateErr) {
+      console.warn("[generate-pdf] Gagal generate DOCX template, fallback ke PDF:", templateErr);
     }
-  } catch (templateErr) {
-    // Template error → lanjut ke fallback PDFKit
-    console.warn("[generate-pdf] Template error, fallback ke PDFKit:", templateErr);
   }
 
-  // ── 2. Fallback: Generate PDF dengan PDFKit (template universal) ─────────
+  // ── 2. Default: PDF untuk Pratinjau Inline & Unduh PDF ───────────────────
   try {
     const pdfBuffer = await generateSuratPDF(suratData);
     const filename = `Surat_${surat.jenis_surat}_${safeNama}.pdf`;
-
-    console.log(`[generate-pdf] Fallback PDFKit untuk: ${surat.jenis_surat}`);
+    const dispositionType = isDownload ? "attachment" : "inline";
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
