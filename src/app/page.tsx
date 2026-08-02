@@ -349,9 +349,10 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
             {LAYANAN.map(({ key, icon: Icon, label, singkat, desc, color, bgLight, textColor }) => (
-              <Card
+              <Link
                 key={key}
-                className="group relative border border-slate-200 hover:border-transparent hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-default overflow-hidden bg-white"
+                href={`/ajukan-surat?jenis=${key}`}
+                className="group relative border border-slate-200 hover:border-transparent hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden bg-white rounded-2xl block"
               >
                 {/* Colored top accent bar */}
                 <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
@@ -367,14 +368,11 @@ export default function HomePage() {
                     <h3 className="font-bold text-slate-900 leading-snug text-sm md:text-base">{label}</h3>
                     <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">{desc}</p>
                   </div>
-                  <Link
-                    href="/ajukan-surat"
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${textColor} group-hover:gap-3 transition-all duration-200`}
-                  >
+                  <div className={`inline-flex items-center gap-1.5 text-xs font-bold ${textColor} group-hover:gap-3 transition-all duration-200`}>
                     Ajukan Sekarang <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                  </div>
                 </CardContent>
-              </Card>
+              </Link>
             ))}
           </div>
         </div>

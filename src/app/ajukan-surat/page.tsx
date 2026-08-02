@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,9 @@ const JENIS_OPTIONS = Object.entries(JENIS_SURAT_CONFIG).map(([key, val]) => ({
   label: val.label,
 }));
 
-export default function AjukanSuratPage() {
+function FormAjukanSurat() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
   // Form state
@@ -41,6 +42,14 @@ export default function AjukanSuratPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto pre-select jenis surat dari URL parameter (misal: ?jenis=SURAT_KETERANGAN_USAHA)
+  useEffect(() => {
+    const jenisFromUrl = searchParams.get("jenis") as JenisSuratKey | null;
+    if (jenisFromUrl && JENIS_SURAT_CONFIG[jenisFromUrl]) {
+      setJenisSurat(jenisFromUrl);
+    }
+  }, [searchParams]);
 
   const handleJenisSuratChange = (val: JenisSuratKey | "" | null) => {
     setJenisSurat(val ?? "");
@@ -389,5 +398,22 @@ export default function AjukanSuratPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AjukanSuratPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="flex items-center gap-2 text-slate-500 text-sm">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            Memuat Formulir Pengajuan...
+          </div>
+        </div>
+      }
+    >
+      <FormAjukanSurat />
+    </Suspense>
   );
 }
