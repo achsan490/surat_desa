@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { DynamicFormFields } from "@/components/surat/DynamicFormFields";
 import { createSurat } from "@/lib/actions/surat.actions";
-import { cn } from "@/lib/utils";
+import { cn, compressImage } from "@/lib/utils";
 import { JENIS_SURAT_CONFIG } from "@/types";
 import type { JenisSuratKey } from "@/types";
 import { FileText, Upload, AlertCircle, CheckCircle2, Loader2, User, Phone, CreditCard } from "lucide-react";
