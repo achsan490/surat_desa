@@ -139,7 +139,6 @@ export default function AjukanSuratPage() {
       const result = await createSurat(formData);
 
       if (result.success) {
-        toast.success("Pengajuan berhasil dikirim! Simpan NIK Anda untuk cek status.");
         router.push(`/cek-status?nik=${nik}&submitted=true`);
       } else {
         toast.error(result.error);

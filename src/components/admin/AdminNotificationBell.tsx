@@ -36,6 +36,8 @@ function playChimeSound() {
   }
 }
 
+const globalNotifiedIds = new Set<string>();
+
 export function AdminNotificationBell() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,11 +64,14 @@ export function AdminNotificationBell() {
 
         // Jika bukan pemuatan pertama, cek apakah ada ID baru yang masuk
         if (!isFirstLoadRef.current) {
-          const newlyAdded = recentPending.filter((item) => !prevIdsRef.current.has(item.id));
+          const newlyAdded = recentPending.filter(
+            (item) => !prevIdsRef.current.has(item.id) && !globalNotifiedIds.has(item.id)
+          );
 
           if (newlyAdded.length > 0) {
             playChimeSound();
             newlyAdded.forEach((surat) => {
+              globalNotifiedIds.add(surat.id);
               const jenisLabel =
                 JENIS_SURAT_CONFIG[surat.jenis_surat as keyof typeof JENIS_SURAT_CONFIG]?.label ??
                 surat.jenis_surat;
@@ -83,6 +88,8 @@ export function AdminNotificationBell() {
           }
         } else {
           isFirstLoadRef.current = false;
+          // Catat ID awal agar tidak membunyikan notifikasi untuk data lama
+          recentPending.forEach((item) => globalNotifiedIds.add(item.id));
         }
 
         prevIdsRef.current = newIds;
