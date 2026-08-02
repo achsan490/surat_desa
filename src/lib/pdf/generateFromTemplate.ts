@@ -1,285 +1,180 @@
-/**
- * generateFromTemplate.ts
- *
- * Mengisi data surat warga ke dalam file DOCX template.
- *
- * Mendukung DUA mode template:
- * 1. Template dengan placeholder {variable} → isi otomatis via docxtemplater
- * 2. Template tanpa placeholder (titik-titik / kosong) → injeksi data via XML patching
- *
- * Jika template tidak ditemukan → return null (fallback ke PDFKit).
- */
-
-import path from "path";
 import fs from "fs";
-import { format } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
+import path from "path";
 import type { SuratWithId } from "@/types";
-import { JENIS_SURAT_CONFIG } from "@/types";
 import { getPengaturanDesa, type PengaturanDesa } from "@/lib/actions/pengaturan.actions";
 
-const TEMPLATES_DIR = path.join(process.cwd(), "public", "templates");
-
-/** Cek ekstensi template yang tersedia untuk jenis surat tertentu */
-function resolveTemplatePath(
-  jenisSurat: string
-): { filePath: string; ext: "docx" | "pdf" } | null {
-  for (const ext of ["docx", "pdf"] as const) {
-    const filePath = path.join(TEMPLATES_DIR, `${jenisSurat}.${ext}`);
-    if (fs.existsSync(filePath)) {
-      return { filePath, ext };
-    }
-  }
-  return null;
+interface TemplateGenerateResult {
+  buffer: Buffer;
+  ext: "docx" | "pdf";
 }
 
-/** Helper resolve image URL/Base64 to Buffer */
-function resolveImageBuffer(url?: string): Buffer | null {
-  if (!url) return null;
-  if (url.startsWith("data:")) {
-    try {
-      const base64Data = url.split(",")[1];
-      if (base64Data) return Buffer.from(base64Data, "base64");
-    } catch (err) {
-      console.error("[generateFromTemplate] Gagal parse Base64 image URL:", err);
-    }
+/**
+ * Format tanggal Indonesia: 2026-03-30 -> "30 Maret 2026"
+ */
+function formatTanggalIndo(dateStr?: string | Date | null): string {
+  if (!dateStr) {
+    const now = new Date();
+    return now.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   }
-  const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
-  const localPath = path.join(process.cwd(), "public", cleanUrl);
-  if (fs.existsSync(localPath)) return fs.readFileSync(localPath);
-  return null;
-}
-
-/** Bangun map placeholder dari data surat — mencakup SEMUA field yang diinput user */
-function buildPlaceholders(
-  surat: SuratWithId,
-  pengaturan?: PengaturanDesa
-): Record<string, string> {
-  const tanggal = format(new Date(surat.created_at), "d MMMM yyyy", {
-    locale: idLocale,
+  const dateObj = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  if (isNaN(dateObj.getTime())) {
+    return String(dateStr);
+  }
+  return dateObj.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
-  const tahun = new Date(surat.created_at).getFullYear();
+}
 
-  const kodeJenis: Record<string, string> = {
-    SKTM: "SKTM",
-    SURAT_KEMATIAN: "SKM",
-    SURAT_DOMISILI: "SKDOM",
-    SURAT_KETERANGAN_USAHA: "SKU",
-    SURAT_BELUM_MENIKAH: "SKBM",
-    SURAT_KELAHIRAN: "SKKL",
-    SURAT_PINDAH: "SKP",
-    SURAT_PENGHASILAN: "SKPH",
-    SURAT_AHLI_WARIS: "SKAW",
-    SURAT_PENGANTAR_NIKAH: "SKPN",
-    SURAT_KEPEMILIKAN_TANAH: "SKKT",
-    SURAT_PENGANTAR_SKCK: "SKCK",
-  };
+/**
+ * Mencari file template di public/templates/ berdasarkan jenis_surat.
+ */
+function findTemplateFile(jenisSurat: string): { filePath: string; ext: "docx" | "pdf" } | null {
+  const dir = path.join(process.cwd(), "public", "templates");
+  if (!fs.existsSync(dir)) return null;
 
-  const kode = kodeJenis[surat.jenis_surat] ?? "SK";
-  const nomorSurat = `001/SK/${kode}/DESA-PK/${tahun}`;
-  const jenisLabel =
-    JENIS_SURAT_CONFIG[surat.jenis_surat as keyof typeof JENIS_SURAT_CONFIG]
-      ?.label ?? surat.jenis_surat;
+  const docxName = `${jenisSurat}.docx`;
+  const docxPath = path.join(dir, docxName);
+  if (fs.existsSync(docxPath)) return { filePath: docxPath, ext: "docx" };
 
-  const namaKades = pengaturan?.nama_kades || "Siti Ro'aini";
-  const jabatanKades = pengaturan?.jabatan_kades || "Kepala Desa Klitih";
+  const pdfName = `${jenisSurat}.pdf`;
+  const pdfPath = path.join(dir, pdfName);
+  if (fs.existsSync(pdfPath)) return { filePath: pdfPath, ext: "pdf" };
 
-  // Sanitasi nilai: ubah null/undefined menjadi string kosong
-  const safeData: Record<string, string> = {};
-  for (const [k, v] of Object.entries(surat.data_kustom ?? {})) {
-    safeData[k] = v ?? "";
+  const files = fs.readdirSync(dir);
+  const match = files.find((f) => {
+    const nameWithoutExt = path.parse(f).name.toUpperCase();
+    return nameWithoutExt === jenisSurat.toUpperCase();
+  });
+
+  if (match) {
+    const ext = path.extname(match).toLowerCase() === ".docx" ? "docx" : "pdf";
+    return { filePath: path.join(dir, match), ext };
   }
 
-  return {
-    // ── Data identitas dari form warga ────────────────────────────────────
+  return null;
+}
+
+/**
+ * Membangun map placeholder dari data surat dan data kustom.
+ */
+function buildPlaceholders(surat: SuratWithId, pengaturan?: PengaturanDesa): Record<string, string> {
+  const tglFormatted = formatTanggalIndo(surat.created_at);
+
+  const kadesNama = pengaturan?.nama_kades ?? "Siti Ro'aini";
+  const kadesJabatan = pengaturan?.jabatan_kades ?? "Kepala Desa Klitih";
+
+  const map: Record<string, string> = {
     nama_lengkap: surat.nama_lengkap ?? "",
     nik: surat.nik ?? "",
     no_whatsapp: surat.no_whatsapp ?? "",
-    no_hp: surat.no_whatsapp ?? "",        // alias
-    telepon: surat.no_whatsapp ?? "",       // alias
-    // ── Data pejabat desa dari Pengaturan ───────────────────────────────
-    nama_kades: namaKades,
-    jabatan_kades: jabatanKades,
-    nama_kepala_desa: namaKades,
-    jabatan_kepala_desa: jabatanKades,
-    // ── Data sistem ───────────────────────────────────────────────────────
-    tanggal,
-    tanggal_surat: tanggal,
-    nomor_surat: nomorSurat,
-    jenis_surat: surat.jenis_surat,
-    jenis_surat_label: jenisLabel,
-    tahun: String(tahun),
-    // ── Semua field kustom dari form (keperluan, nama_almarhum, dll.) ─────
-    ...safeData,
+    jenis_surat: surat.jenis_surat ?? "",
+    nomor_surat: (surat as Record<string, any>).nomor_surat ?? `470/${surat.id.slice(0, 4)}/415.54.08/2026`,
+    status: surat.status ?? "",
+    tanggal: tglFormatted,
+    tanggal_surat: tglFormatted,
+
+    nama_kades: kadesNama,
+    jabatan_kades: kadesJabatan,
+    nama_kepala_desa: kadesNama,
+    jabatan_kepala_desa: kadesJabatan,
+
+    nama: surat.nama_lengkap ?? "",
+    no_wa: surat.no_whatsapp ?? "",
+    telepon: surat.no_whatsapp ?? "",
   };
+
+  if (surat.data_kustom && typeof surat.data_kustom === "object") {
+    for (const [key, val] of Object.entries(surat.data_kustom)) {
+      if (val !== undefined && val !== null) {
+        map[key] = String(val);
+      }
+    }
+  }
+
+  return map;
 }
 
 /**
- * Deteksi apakah DOCX template memiliki placeholder {variable}.
- * Cek di XML konten word/document.xml.
+ * Mengecek apakah xml document berisi placeholder {nama}
  */
-function hasPlaceholders(xml: string): boolean {
-  // Cari pola {kata} yang bukan tag XML
-  return /\{[a-zA-Z_][a-zA-Z0-9_]*\}/.test(xml);
+function hasPlaceholders(xmlText: string): boolean {
+  return /\{[a-zA-Z0-9_-]+\}/.test(xmlText);
 }
 
 /**
- * Patch XML: Ganti pola titik-titik (.....) setelah label umum
- * dengan data warga secara langsung di dalam XML string.
- *
- * Pendekatan ini bekerja untuk template desa yang memakai format:
- *   Nama : ................................................................
- *   NIK  : ................................................................
+ * Melakukan replacement sederhana jika docxtemplater gagal
  */
-function patchXmlWithData(xml: string, data: Record<string, string>): string {
-  // Helper: escape karakter XML
-  const esc = (s: string) =>
-    s
+function fallbackSimpleReplace(xmlText: string, placeholders: Record<string, string>): string {
+  let result = xmlText;
+  for (const [key, val] of Object.entries(placeholders)) {
+    const escapedVal = val
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
 
-  // Pola: teks titik-titik panjang (5+) dalam XML bisa terpecah antar tag
-  // Kita flatten dulu, patch, lalu return
-  // Strategi: ganti semua run yang mengandung ..... dengan data
-
-  // Ganti pola titik-titik yang ada setelah label dalam bentuk plain text di XML
-  const dotPattern = /(\.|&#46;|&#x2E;){5,}/g;
-
-  // Kita akan inject berdasarkan konteks: cari semua <w:t>.....</w:t>
-  // dan ganti dengan nilai yang relevan berdasarkan label terdekat sebelumnya
-
-  let result = xml;
-
-  // ── Mapping label → nilai yang perlu diinjeksikan ───────────────────────
-  const labelValueMap: Array<[RegExp, string]> = [
-    // Nama
-    [/(<w:t[^>]*>)([^<]*Nama\s*:?\s*)(<\/w:t>)[\s\S]*?<w:t[^>]*>(\.*)\s*<\/w:t>/i,
-      `$1$2$3`],
-  ];
-
-  // Pendekatan lebih sederhana dan reliable:
-  // Pisah XML menjadi chunks berdasarkan paragraph (<w:p>)
-  // dan match label + titik-titik dalam satu paragraph
-
-  const paragraphs = result.split(/(?=<w:p[ >])/);
-  const processed = paragraphs.map((para) => {
-    // Extract teks plain dari paragraph
-    const textMatches = para.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) ?? [];
-    const plainText = textMatches
-      .map((m) => m.replace(/<[^>]+>/g, ""))
-      .join("");
-
-    if (!dotPattern.test(plainText)) return para;
-
-    // Tentukan nilai yang akan diisikan berdasarkan label dalam teks paragraf
-    let valueToInsert = "";
-
-    // ── Check specific names first ──
-    if (/nama\s*(almarhum|jenazah)/i.test(plainText)) {
-      valueToInsert = esc(data.nama_almarhum ?? "");
-    } else if (/nama\s*pewaris/i.test(plainText)) {
-      valueToInsert = esc(data.nama_pewaris ?? "");
-    } else if (/nama\s*bayi/i.test(plainText)) {
-      valueToInsert = esc(data.nama_bayi ?? "");
-    } else if (/nama\s*(pasangan|calon)/i.test(plainText)) {
-      valueToInsert = esc(data.nama_pasangan ?? "");
-    } else if (/nik\s*(pasangan|calon)/i.test(plainText)) {
-      valueToInsert = esc(data.nik_pasangan ?? "");
-    } else if (/nama\s*ayah/i.test(plainText)) {
-      valueToInsert = esc(data.nama_ayah ?? "");
-    } else if (/nama\s*ibu/i.test(plainText)) {
-      valueToInsert = esc(data.nama_ibu ?? "");
-    } else if (/nama\s*usaha/i.test(plainText)) {
-      valueToInsert = esc(data.nama_usaha ?? "");
-    } else if (/jenis\s*usaha/i.test(plainText)) {
-      valueToInsert = esc(data.jenis_usaha ?? "");
-    } else if (/alamat\s*usaha/i.test(plainText)) {
-      valueToInsert = esc(data.alamat_usaha ?? "");
-    } else if (/alamat\s*tujuan/i.test(plainText)) {
-      valueToInsert = esc(data.alamat_tujuan ?? "");
-    } else if (/alamat\s*asal/i.test(plainText)) {
-      valueToInsert = esc(data.alamat_asal ?? "");
-    } else if (/alasan\s*pindah/i.test(plainText)) {
-      valueToInsert = esc(data.alasan_pindah ?? "");
-    } else if (/(jumlah|banyaknya?)\s*pengikut/i.test(plainText)) {
-      valueToInsert = esc(data.jumlah_pengikut ?? "");
-    } else if (/nominal|penghasilan|gaji/i.test(plainText)) {
-      valueToInsert = esc(data.nominal_penghasilan ? `Rp ${data.nominal_penghasilan}` : "");
-    } else if (/sumber\s*penghasilan|pekerjaan/i.test(plainText)) {
-      valueToInsert = esc(data.sumber_penghasilan ?? "-");
-    } else if (/ahli\s*waris/i.test(plainText)) {
-      valueToInsert = esc(data.jumlah_ahli_waris ?? "");
-    } else if (/(tempat|rencana)\s*(nikah|akad|kua)/i.test(plainText)) {
-      valueToInsert = esc(data.tempat_nikah ?? "");
-    } else if (/sertifikat|girik|petok/i.test(plainText)) {
-      valueToInsert = esc(data.nomor_sertifikat ?? "");
-    } else if (/luas\s*tanah/i.test(plainText)) {
-      valueToInsert = esc(data.luas_tanah ?? "");
-    } else if (/alamat\s*tanah|lokasi\s*tanah/i.test(plainText)) {
-      valueToInsert = esc(data.alamat_tanah ?? "");
-    }
-    // ── Check general fields ──
-    else if (/nama\s*[:：]/i.test(plainText)) {
-      valueToInsert = esc(data.nama_lengkap);
-    } else if (/\bnik\b/i.test(plainText)) {
-      valueToInsert = esc(data.nik);
-    } else if (/no\.?\s*kk/i.test(plainText)) {
-      valueToInsert = "-";
-    } else if (/no\.?\s*(hp|telepon|wa|whatsapp)/i.test(plainText)) {
-      valueToInsert = esc(data.no_whatsapp);
-    } else if (/keperluan|tujuan/i.test(plainText)) {
-      valueToInsert = esc(data.keperluan ?? data.tujuan_surat ?? "");
-    } else if (/alamat/i.test(plainText)) {
-      valueToInsert = "Desa Klitih, Kecamatan Plandaan, Kab. Jombang";
-    } else if (/tanggal\s*meninggal/i.test(plainText)) {
-      valueToInsert = esc(data.tanggal_meninggal ?? "-");
-    } else if (/tempat\s*meninggal/i.test(plainText)) {
-      valueToInsert = esc(data.tempat_meninggal ?? "-");
-    } else if (/tanggal\s*lahir/i.test(plainText)) {
-      valueToInsert = esc(data.tanggal_lahir ?? "-");
-    } else if (/tempat\s*lahir/i.test(plainText)) {
-      valueToInsert = esc(data.tempat_lahir ?? "-");
-    } else if (/tanggal/i.test(plainText)) {
-      valueToInsert = esc(data.tanggal ?? "");
-    } else {
-      return para; // tidak cocok dengan label manapun, biarkan
-    }
-
-    if (!valueToInsert) return para;
-
-    // Ganti semua pola titik-titik dalam paragraph ini
-    return para.replace(dotPattern, valueToInsert);
-  });
-
-  return processed.join("");
+    const regex = new RegExp(`\\{${key}\\}`, "g");
+    result = result.replace(regex, escapedVal);
+  }
+  return result;
 }
 
 /**
- * Coba generate dokumen dari template yang diupload admin.
- *
- * @returns Buffer dokumen (DOCX atau PDF), atau null jika tidak ada template.
+ * Helper untuk mengubah URL/path gambar menjadi Buffer jika valid.
+ */
+function resolveImageBuffer(imgUrl?: string | null): Buffer | null {
+  if (!imgUrl) return null;
+  try {
+    if (imgUrl.startsWith("data:image/")) {
+      const base64Data = imgUrl.split(",")[1];
+      if (base64Data) return Buffer.from(base64Data, "base64");
+    }
+    let localPath = imgUrl;
+    if (imgUrl.startsWith("http://") || imgUrl.startsWith("https://")) {
+      return null;
+    }
+    if (imgUrl.startsWith("/")) {
+      localPath = path.join(process.cwd(), "public", imgUrl);
+    }
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+  } catch (err) {
+    console.warn("[generateFromTemplate] Gagal membaca buffer gambar:", imgUrl, err);
+  }
+  return null;
+}
+
+/**
+ * Fungsi Utama: Generate buffer surat dari template di public/templates/
  */
 export async function generateFromTemplate(
   surat: SuratWithId
-): Promise<{ buffer: Buffer; ext: "docx" | "pdf" } | null> {
-  const template = resolveTemplatePath(surat.jenis_surat);
-  if (!template) return null;
+): Promise<TemplateGenerateResult | null> {
+  const found = findTemplateFile(surat.jenis_surat);
+  if (!found) {
+    console.log(`[generateFromTemplate] Template tidak ditemukan untuk: ${surat.jenis_surat}`);
+    return null;
+  }
 
-  const { filePath, ext } = template;
+  const { filePath, ext } = found;
 
-  // ── PDF template: kembalikan langsung tanpa modifikasi ──────────────────
   if (ext === "pdf") {
+    console.log(`[generateFromTemplate] Menggunakan file PDF statis: ${filePath}`);
     const buffer = fs.readFileSync(filePath);
     return { buffer, ext: "pdf" };
   }
 
-  // ── Ambil konfigurasi desa dari Pengaturan (TTD, Stempel, Nama Kades) ───
   const settingsResult = await getPengaturanDesa();
   const pengaturan = settingsResult.success ? settingsResult.data : undefined;
 
-  // ── DOCX template: isi dengan data warga ────────────────────────────────
   try {
     const PizZip = (await import("pizzip")).default;
     const Docxtemplater = (await import("docxtemplater")).default;
@@ -287,40 +182,32 @@ export async function generateFromTemplate(
     const fileContent = fs.readFileSync(filePath, "binary");
     const zip = new PizZip(fileContent);
 
-    // ── Update gambar TTD & Stempel dari Pengaturan jika tersedia ─────────
-    if (pengaturan?.url_ttd || pengaturan?.url_stempel) {
-      const mediaPngs = Object.keys(zip.files).filter(
-        (f) => f.startsWith("word/media/") && (f.endsWith(".png") || f.endsWith(".jpeg") || f.endsWith(".jpg"))
-      );
+    // ── Update gambar TTD & Stempel (TIDAK PERNAH MENYENTUH LOGO IMAGE1) ──────
+    const mediaPngs = Object.keys(zip.files).filter(
+      (f) => f.startsWith("word/media/") && (f.endsWith(".png") || f.endsWith(".jpeg") || f.endsWith(".jpg"))
+    );
 
-      const logoPath = path.join(process.cwd(), "public", "assets", "logo-jombang.png");
-      const logoLen = fs.existsSync(logoPath) ? fs.readFileSync(logoPath).length : 0;
+    // Filter out Kop logo: image1.png SELALU LOGO PEMKAB JOMBANG di Kop Surat!
+    const signatureMedia = mediaPngs.filter(
+      (f) =>
+        !f.toLowerCase().endsWith("image1.png") &&
+        !f.toLowerCase().endsWith("image1.jpeg") &&
+        !f.toLowerCase().endsWith("image1.jpg")
+    );
 
-      // Filter out Kop logo (media file whose size matches logo-jombang.png)
-      const signatureAndStampMedia = mediaPngs.filter((f) => {
-        const fileLen = zip.files[f]?.asText()?.length ?? 0;
-        return logoLen === 0 || Math.abs(fileLen - logoLen) > 5000;
-      });
+    if (signatureMedia.length > 0) {
+      const combinedPath = path.join(process.cwd(), "public", "assets", "ttd-dan-stempel.png");
+      const combinedBuf = fs.existsSync(combinedPath) ? fs.readFileSync(combinedPath) : null;
 
-      if (signatureAndStampMedia.length > 0) {
-        // Sort non-logo media files by size
-        const sorted = [...signatureAndStampMedia].sort(
-          (a, b) => (zip.files[a]?.asText()?.length ?? 0) - (zip.files[b]?.asText()?.length ?? 0)
-        );
-
-        if (pengaturan.url_ttd) {
-          const ttdBuf = resolveImageBuffer(pengaturan.url_ttd);
-          if (ttdBuf && sorted.length >= 1) {
-            zip.file(sorted[0], ttdBuf);
-          }
+      if (pengaturan?.url_stempel || pengaturan?.url_ttd) {
+        const customStempel = pengaturan?.url_stempel ? resolveImageBuffer(pengaturan.url_stempel) : null;
+        const customTTD = pengaturan?.url_ttd ? resolveImageBuffer(pengaturan.url_ttd) : null;
+        const bufToUse = customStempel || customTTD || combinedBuf;
+        if (bufToUse) {
+          zip.file(signatureMedia[0], bufToUse);
         }
-
-        if (pengaturan.url_stempel) {
-          const stempelBuf = resolveImageBuffer(pengaturan.url_stempel);
-          if (stempelBuf && sorted.length >= 2) {
-            zip.file(sorted[1], stempelBuf);
-          }
-        }
+      } else if (combinedBuf) {
+        zip.file(signatureMedia[0], combinedBuf);
       }
     }
 
@@ -330,42 +217,27 @@ export async function generateFromTemplate(
     let outputBuffer: Buffer;
 
     if (hasPlaceholders(xmlContent)) {
-      // ── Mode 1: Template memiliki {placeholder} → pakai docxtemplater ───
       console.log(`[generateFromTemplate] Mode: placeholder → ${surat.jenis_surat}`);
 
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
-        nullGetter: () => "", // placeholder tidak ada → string kosong
+        delimiters: { start: "{", end: "}" },
       });
 
       doc.render(placeholders);
-
-      outputBuffer = doc.getZip().generate({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-      }) as Buffer;
+      outputBuffer = doc.getZip().generate({ type: "nodebuffer" }) as Buffer;
     } else {
-      // ── Mode 2: Template pakai titik-titik → patch XML langsung ─────────
-      console.log(
-        `[generateFromTemplate] Mode: xml-patch (titik-titik) → ${surat.jenis_surat}`
-      );
+      console.log(`[generateFromTemplate] Mode: fallback replace → ${surat.jenis_surat}`);
 
-      const patchedXml = patchXmlWithData(xmlContent, placeholders);
-      zip.file("word/document.xml", patchedXml);
-
-      outputBuffer = zip.generate({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-      }) as Buffer;
+      const newXml = fallbackSimpleReplace(xmlContent, placeholders);
+      zip.file("word/document.xml", newXml);
+      outputBuffer = zip.generate({ type: "nodebuffer" }) as Buffer;
     }
 
     return { buffer: outputBuffer, ext: "docx" };
   } catch (err) {
-    console.error("[generateFromTemplate] Error:", err);
-    return null; // fallback ke PDFKit
+    console.error(`[generateFromTemplate] Error memproses template ${filePath}:`, err);
+    return null;
   }
 }
-
-// Re-export info placeholder
-export { PLACEHOLDER_INFO } from "./placeholderInfo";
