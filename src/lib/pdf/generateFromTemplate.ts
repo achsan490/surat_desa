@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import type { SuratWithId } from "@/types";
 import { JENIS_SURAT_CONFIG } from "@/types";
+import { getPengaturanDesa, type PengaturanDesa } from "@/lib/actions/pengaturan.actions";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "public", "templates");
 
@@ -32,8 +33,28 @@ function resolveTemplatePath(
   return null;
 }
 
+/** Helper resolve image URL/Base64 to Buffer */
+function resolveImageBuffer(url?: string): Buffer | null {
+  if (!url) return null;
+  if (url.startsWith("data:")) {
+    try {
+      const base64Data = url.split(",")[1];
+      if (base64Data) return Buffer.from(base64Data, "base64");
+    } catch (err) {
+      console.error("[generateFromTemplate] Gagal parse Base64 image URL:", err);
+    }
+  }
+  const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
+  const localPath = path.join(process.cwd(), "public", cleanUrl);
+  if (fs.existsSync(localPath)) return fs.readFileSync(localPath);
+  return null;
+}
+
 /** Bangun map placeholder dari data surat — mencakup SEMUA field yang diinput user */
-function buildPlaceholders(surat: SuratWithId): Record<string, string> {
+function buildPlaceholders(
+  surat: SuratWithId,
+  pengaturan?: PengaturanDesa
+): Record<string, string> {
   const tanggal = format(new Date(surat.created_at), "d MMMM yyyy", {
     locale: idLocale,
   });
@@ -60,6 +81,9 @@ function buildPlaceholders(surat: SuratWithId): Record<string, string> {
     JENIS_SURAT_CONFIG[surat.jenis_surat as keyof typeof JENIS_SURAT_CONFIG]
       ?.label ?? surat.jenis_surat;
 
+  const namaKades = pengaturan?.nama_kades || "Siti Ro'aini";
+  const jabatanKades = pengaturan?.jabatan_kades || "Kepala Desa Klitih";
+
   // Sanitasi nilai: ubah null/undefined menjadi string kosong
   const safeData: Record<string, string> = {};
   for (const [k, v] of Object.entries(surat.data_kustom ?? {})) {
@@ -73,6 +97,11 @@ function buildPlaceholders(surat: SuratWithId): Record<string, string> {
     no_whatsapp: surat.no_whatsapp ?? "",
     no_hp: surat.no_whatsapp ?? "",        // alias
     telepon: surat.no_whatsapp ?? "",       // alias
+    // ── Data pejabat desa dari Pengaturan ───────────────────────────────
+    nama_kades: namaKades,
+    jabatan_kades: jabatanKades,
+    nama_kepala_desa: namaKades,
+    jabatan_kepala_desa: jabatanKades,
     // ── Data sistem ───────────────────────────────────────────────────────
     tanggal,
     tanggal_surat: tanggal,
@@ -246,6 +275,10 @@ export async function generateFromTemplate(
     return { buffer, ext: "pdf" };
   }
 
+  // ── Ambil konfigurasi desa dari Pengaturan (TTD, Stempel, Nama Kades) ───
+  const settingsResult = await getPengaturanDesa();
+  const pengaturan = settingsResult.success ? settingsResult.data : undefined;
+
   // ── DOCX template: isi dengan data warga ────────────────────────────────
   try {
     const PizZip = (await import("pizzip")).default;
@@ -254,8 +287,45 @@ export async function generateFromTemplate(
     const fileContent = fs.readFileSync(filePath, "binary");
     const zip = new PizZip(fileContent);
 
+    // ── Update gambar TTD & Stempel dari Pengaturan jika tersedia ─────────
+    if (pengaturan?.url_ttd || pengaturan?.url_stempel) {
+      const mediaPngs = Object.keys(zip.files).filter(
+        (f) => f.startsWith("word/media/") && (f.endsWith(".png") || f.endsWith(".jpeg") || f.endsWith(".jpg"))
+      );
+
+      const logoPath = path.join(process.cwd(), "public", "assets", "logo-jombang.png");
+      const logoLen = fs.existsSync(logoPath) ? fs.readFileSync(logoPath).length : 0;
+
+      // Filter out Kop logo (media file whose size matches logo-jombang.png)
+      const signatureAndStampMedia = mediaPngs.filter((f) => {
+        const fileLen = zip.files[f]?.asText()?.length ?? 0;
+        return logoLen === 0 || Math.abs(fileLen - logoLen) > 5000;
+      });
+
+      if (signatureAndStampMedia.length > 0) {
+        // Sort non-logo media files by size
+        const sorted = [...signatureAndStampMedia].sort(
+          (a, b) => (zip.files[a]?.asText()?.length ?? 0) - (zip.files[b]?.asText()?.length ?? 0)
+        );
+
+        if (pengaturan.url_ttd) {
+          const ttdBuf = resolveImageBuffer(pengaturan.url_ttd);
+          if (ttdBuf && sorted.length >= 1) {
+            zip.file(sorted[0], ttdBuf);
+          }
+        }
+
+        if (pengaturan.url_stempel) {
+          const stempelBuf = resolveImageBuffer(pengaturan.url_stempel);
+          if (stempelBuf && sorted.length >= 2) {
+            zip.file(sorted[1], stempelBuf);
+          }
+        }
+      }
+    }
+
     const xmlContent = zip.files["word/document.xml"].asText();
-    const placeholders = buildPlaceholders(surat);
+    const placeholders = buildPlaceholders(surat, pengaturan);
 
     let outputBuffer: Buffer;
 

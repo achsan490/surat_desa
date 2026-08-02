@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getAllSuratAdmin } from "@/lib/actions/surat.actions";
 import { StatCard } from "@/components/admin/StatCard";
 import { StatusBadge } from "@/components/surat/StatusBadge";
+import { SuratPreviewModal } from "@/components/admin/SuratPreviewModal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteSuratButton } from "@/components/admin/DeleteSuratButton";
@@ -263,17 +264,25 @@ export default async function AdminDashboardPage({ searchParams }: DashboardPage
                         {/* Aksi */}
                         <TableCell className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* Download PDF Shortcut (if approved) */}
+                            {/* Preview & Download PDF Shortcut (if approved) */}
                             {surat.status === "APPROVED" && (
-                              <a
-                                href={`/api/generate-pdf?id=${surat.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Unduh PDF Surat"
-                                className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </a>
+                              <>
+                                <SuratPreviewModal
+                                  suratId={surat.id}
+                                  namaPemohon={surat.nama_lengkap}
+                                  jenisSuratLabel={jenisConfig?.label ?? surat.jenis_surat}
+                                  variant="icon"
+                                />
+                                <a
+                                  href={`/api/generate-pdf?id=${surat.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Unduh PDF Langsung"
+                                  className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                >
+                                  <FileDown className="h-4 w-4" />
+                                </a>
+                              </>
                             )}
 
                             {/* Detail Button */}

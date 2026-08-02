@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { approveSurat, rejectSurat } from "@/lib/actions/surat.actions";
+import { SuratPreviewModal } from "@/components/admin/SuratPreviewModal";
 import { JENIS_SURAT_CONFIG } from "@/types";
 import {
   ArrowLeft,
@@ -330,18 +331,27 @@ export default async function DetailSuratPage({ params }: DetailSuratPageProps) 
                 <div className="space-y-1">
                   <p className="font-bold text-slate-900 text-sm">Surat Telah Disetujui</p>
                   <p className="text-xs text-slate-500">
-                    File PDF resmi desa sudah diterbitkan dan dapat diunduh oleh warga dari HP mereka.
+                    Silakan cek &amp; pratinjau tampilan surat terlebih dahulu sebelum mengunduh.
                   </p>
                 </div>
-                <a
-                  href={`/api/generate-pdf?id=${surat.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-colors"
-                >
-                  <FileDown className="h-4 w-4" />
-                  Unduh File PDF Surat
-                </a>
+                <div className="flex flex-col gap-2 pt-1">
+                  <SuratPreviewModal
+                    suratId={surat.id}
+                    namaPemohon={surat.nama_lengkap}
+                    jenisSuratLabel={jenisConfig?.label ?? surat.jenis_surat}
+                    variant="button"
+                    triggerClassName="w-full"
+                  />
+                  <a
+                    href={`/api/generate-pdf?id=${surat.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold py-2 rounded-xl transition-colors"
+                  >
+                    <FileDown className="h-4 w-4 text-emerald-600" />
+                    Unduh Langsung (Tanpa Pratinjau)
+                  </a>
+                </div>
               </CardContent>
             </Card>
           )}

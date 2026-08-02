@@ -47,6 +47,9 @@ export async function GET(request: NextRequest) {
 
   const safeNama = surat.nama_lengkap.replace(/[^a-zA-Z0-9]/g, "_");
 
+  const isDownload = searchParams.get("download") === "true";
+  const dispositionType = isDownload ? "attachment" : "inline";
+
   // ── 1. Coba generate dari template yang diupload admin ──────────────────
   try {
     const templateResult = await generateFromTemplate(suratData);
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": contentType,
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": `${dispositionType}; filename="${filename}"`,
           "Content-Length": buffer.length.toString(),
           "Cache-Control": "no-store",
         },
@@ -84,7 +87,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `${dispositionType}; filename="${filename}"`,
         "Content-Length": pdfBuffer.length.toString(),
         "Cache-Control": "no-store",
       },

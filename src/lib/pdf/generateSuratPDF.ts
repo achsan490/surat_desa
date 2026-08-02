@@ -34,7 +34,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
   const textWidth = marginRight - textX;  // sisa lebar halaman ke kanan
 
   doc
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(11)
     .fillColor("#1a1a2e")
     .text("PEMERINTAH KABUPATEN JOMBANG", textX, 34, {
@@ -43,8 +43,8 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     });
 
   doc
-    .font("Helvetica")
-    .fontSize(10)
+    .font("Times-Bold")
+    .fontSize(11)
     .fillColor("#1a1a2e")
     .text("KECAMATAN PLANDAAN", textX, 49, {
       align: "center",
@@ -52,7 +52,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     });
 
   doc
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(15)
     .fillColor("#1a1a2e")
     .text("DESA KLITIH", textX, 63, {
@@ -61,7 +61,7 @@ function drawHeader(doc: PDFKit.PDFDocument) {
     });
 
   doc
-    .font("Helvetica")
+    .font("Times-Italic")
     .fontSize(8)
     .fillColor("#555")
     .text(
@@ -98,7 +98,7 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
   // Kota dan tanggal
   const tanggalStr = format(new Date(surat.created_at), "d MMMM yyyy", { locale: idLocale });
   doc
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(10)
     .fillColor("#333")
     .text(`Klitih, ${tanggalStr}`, marginRight - 200, footerY, { align: "right", width: 200 });
@@ -107,7 +107,7 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
   const namaKades = pengaturan?.nama_kades || "Siti Ro'aini";
 
   doc
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(10)
     .text(`${jabatan},`, marginRight - 200, footerY + 16, {
       align: "right",
@@ -137,21 +137,7 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
   const ttdX = marginRight - 110;  // rata kanan dengan margin halaman
   const ttdY = footerY + 34;
 
-  if (stempelSource && (typeof stempelSource !== "string" || fs.existsSync(stempelSource))) {
-    doc.save();
-    doc.opacity(0.6);
-    doc.image(stempelSource, ttdX - 30, ttdY - 10, { width: 90 });
-    doc.restore();
-  } else {
-    const fallbackStempel = getAssetPath("stempel-desa.png");
-    if (fs.existsSync(fallbackStempel)) {
-      doc.save();
-      doc.opacity(0.6);
-      doc.image(fallbackStempel, ttdX - 30, ttdY - 10, { width: 90 });
-      doc.restore();
-    }
-  }
-
+  // 1. Gambar Tanda Tangan terlebih dahulu (Layer Bawah)
   if (ttdSource && (typeof ttdSource !== "string" || fs.existsSync(ttdSource))) {
     doc.image(ttdSource, ttdX, ttdY, { width: 110, height: 55 });
   } else {
@@ -160,18 +146,34 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
       doc.image(fallbackTTD, ttdX, ttdY, { width: 110, height: 55 });
     } else {
       doc.rect(ttdX, ttdY, 110, 50).dash(4, { space: 2 }).stroke("#aaa").undash();
-      doc.font("Helvetica").fontSize(8).fillColor("#aaa").text("[Tanda Tangan]", ttdX, ttdY + 18, { width: 110, align: "center" });
+      doc.font("Times-Roman").fontSize(8).fillColor("#aaa").text("[Tanda Tangan]", ttdX, ttdY + 18, { width: 110, align: "center" });
+    }
+  }
+
+  // 2. Gambar Stempel Desa setelahnya (Layer Atas - Menimpa TTD & Nama Kades)
+  if (stempelSource && (typeof stempelSource !== "string" || fs.existsSync(stempelSource))) {
+    doc.save();
+    doc.opacity(0.85);
+    doc.image(stempelSource, ttdX - 25, ttdY - 15, { width: 100, height: 100 });
+    doc.restore();
+  } else {
+    const fallbackStempel = getAssetPath("stempel-desa.png");
+    if (fs.existsSync(fallbackStempel)) {
+      doc.save();
+      doc.opacity(0.85);
+      doc.image(fallbackStempel, ttdX - 25, ttdY - 15, { width: 100, height: 100 });
+      doc.restore();
     }
   }
 
   doc
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(10)
     .fillColor("#333")
-    .text(namaKades, marginRight - 200, ttdY + 60, { align: "right", width: 200 });
+    .text(namaKades, marginRight - 200, ttdY + 60, { align: "right", width: 200, underline: true });
 
   doc
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(9)
     .text(jabatan, marginRight - 200, ttdY + 74, { align: "right", width: 200 });
 
@@ -187,7 +189,7 @@ function drawFooter(doc: PDFKit.PDFDocument, surat: SuratWithId, pengaturan?: Pe
     .stroke();
 
   doc
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(7)
     .fillColor("#999")
     .text(
@@ -207,31 +209,35 @@ function drawNomorSurat(doc: PDFKit.PDFDocument, surat: SuratWithId, nomorUrut: 
     SURAT_KEMATIAN: "SKM",
     SURAT_DOMISILI: "SKDOM",
     SURAT_KETERANGAN_USAHA: "SKU",
+    SURAT_BELUM_MENIKAH: "SKBM",
+    SURAT_KELAHIRAN: "SKKL",
+    SURAT_PINDAH: "SKP",
+    SURAT_PENGHASILAN: "SKPH",
+    SURAT_AHLI_WARIS: "SKAW",
+    SURAT_PENGANTAR_NIKAH: "SKPN",
+    SURAT_KEPEMILIKAN_TANAH: "SKKT",
+    SURAT_PENGANTAR_SKCK: "SKCK",
   };
   const kode = kodeJenis[surat.jenis_surat] ?? "SK";
   const nomorSurat = `${nomorUrut}/SK/${kode}/DESA-PK/${tahun}`;
 
+  const labelSurat = JENIS_SURAT_CONFIG[surat.jenis_surat as keyof typeof JENIS_SURAT_CONFIG]?.label?.toUpperCase() ?? "SURAT KETERANGAN";
+
   doc
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(14)
     .fillColor("#1a1a2e")
-    .text(JENIS_SURAT_CONFIG[surat.jenis_surat as keyof typeof JENIS_SURAT_CONFIG]?.label?.toUpperCase() ?? "SURAT KETERANGAN", 72, 130, {
+    .text(labelSurat, 72, 130, {
       align: "center",
       width: doc.page.width - 144,
+      underline: true,
     });
 
   doc
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor("#555")
+    .font("Times-Roman")
+    .fontSize(11)
+    .fillColor("#333")
     .text(`Nomor: ${nomorSurat}`, 72, 150, { align: "center", width: doc.page.width - 144 });
-
-  doc
-    .moveTo(200, 168)
-    .lineTo(doc.page.width - 200, 168)
-    .lineWidth(0.5)
-    .strokeColor("#999")
-    .stroke();
 }
 
 function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
@@ -242,7 +248,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
   const lineHeight = 18;
 
   const p = (label: string, value: string) => {
-    doc.font("Helvetica").fontSize(10).fillColor("#222");
+    doc.font("Times-Roman").fontSize(10).fillColor("#222");
     doc.text(label, marginLeft, y, { continued: false, width: 180 });
     doc.text(":", marginLeft + 180, y, { continued: false, width: 15 });
     doc.text(value, marginLeft + 200, y, { continued: false, width: bodyWidth - 200 });
@@ -251,7 +257,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
 
   // Pembuka
   doc
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(10)
     .fillColor("#222")
     .text(
@@ -272,7 +278,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
 
   if (surat.jenis_surat === "SKTM") {
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       `Adalah benar warga Desa Klitih yang tercatat sebagai warga kurang mampu. Surat ini diterbitkan untuk keperluan: ${dataKustom.keperluan ?? "-"}.`,
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -282,15 +288,15 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Tanggal Meninggal", dataKustom.tanggal_meninggal ?? "-");
     p("Tempat Meninggal", dataKustom.tempat_meninggal ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Adalah benar telah meninggal dunia sebagaimana tercatat di atas. Surat keterangan ini diterbitkan untuk keperluan administrasi kependudukan.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
     y += 42;
   } else if (surat.jenis_surat === "SURAT_DOMISILI") {
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
-      `Adalah benar berdomisili and bertempat tinggal di Desa Klitih, Kecamatan Plandaan, Kabupaten Jombang. Surat ini diterbitkan untuk keperluan: ${dataKustom.tujuan_surat ?? "-"}.`,
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
+      `Adalah benar berdomisili dan bertempat tinggal di Desa Klitih, Kecamatan Plandaan, Kabupaten Jombang. Surat ini diterbitkan untuk keperluan: ${dataKustom.tujuan_surat ?? "-"}.`,
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
     y += 52;
@@ -299,14 +305,14 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Jenis Usaha", dataKustom.jenis_usaha ?? "-");
     p("Alamat Usaha", dataKustom.alamat_usaha ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Adalah benar menjalankan usaha sebagaimana tersebut di atas di wilayah Desa Klitih. Surat keterangan ini diterbitkan sebagai bukti legalitas usaha.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
     y += 42;
   } else if (surat.jenis_surat === "SURAT_BELUM_MENIKAH") {
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       `Berdasarkan data kependudukan dan catatan desa kami, menerangkan bahwa yang bersangkutan sepanjang pengetahuan kami belum pernah menikah dengan siapapun. Surat keterangan ini dibuat untuk keperluan: ${dataKustom.keperluan ?? "-"}.`,
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -318,7 +324,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Nama Ayah", dataKustom.nama_ayah ?? "-");
     p("Nama Ibu", dataKustom.nama_ibu ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Adalah benar nama bayi tersebut di atas telah lahir sebagai anak kandung dari pasangan suami istri yang sah sebagaimana tercantum dalam catatan kependudukan Desa Klitih.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -329,7 +335,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Alasan Pindah", dataKustom.alasan_pindah ?? "-");
     p("Jumlah Pengikut", dataKustom.jumlah_pengikut ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Menerangkan bahwa yang bersangkutan mengajukan permohonan pindah domisili dari Desa Klitih menuju alamat tujuan yang tercantum di atas bersama dengan seluruh pengikutnya.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -338,7 +344,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Nominal Penghasilan", `Rp ${dataKustom.nominal_penghasilan ?? "-"}`);
     p("Pekerjaan / Sumber", dataKustom.sumber_penghasilan ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       `Menerangkan bahwa yang bersangkutan memiliki rata-rata penghasilan per bulan sebagaimana tercantum di atas. Surat keterangan ini diterbitkan untuk memenuhi persyaratan: ${dataKustom.keperluan ?? "-"}.`,
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -348,7 +354,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Tanggal Meninggal", dataKustom.tanggal_meninggal ?? "-");
     p("Jumlah Ahli Waris", dataKustom.jumlah_ahli_waris ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Menyatakan dengan sebenarnya bahwa nama-nama tersebut di atas adalah ahli waris sah dari almarhum/almarhumah pewaris, yang berhak atas seluruh harta peninggalan menurut ketentuan hukum yang berlaku.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -358,7 +364,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("NIK Calon Pasangan", dataKustom.nik_pasangan ?? "-");
     p("Rencana Tempat Nikah", dataKustom.tempat_nikah ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Menerangkan bahwa yang bersangkutan adalah warga Desa Klitih yang bersiap melangsungkan pernikahan dengan calon pasangan tersebut di atas. Surat pengantar ini diterbitkan untuk pengurusan ke KUA setempat.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -368,14 +374,14 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
     p("Luas Bidang Tanah", dataKustom.luas_tanah ?? "-");
     p("Lokasi / Alamat Tanah", dataKustom.alamat_tanah ?? "-");
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       "Menerangkan secara resmi bahwa bidang tanah dengan keterangan di atas dikuasai/dimiliki secara fisik oleh yang bersangkutan dan tidak dalam status sengketa pihak lain.",
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
     y += 42;
   } else if (surat.jenis_surat === "SURAT_PENGANTAR_SKCK") {
     y += 8;
-    doc.font("Helvetica").fontSize(10).fillColor("#222").text(
+    doc.font("Times-Roman").fontSize(10).fillColor("#222").text(
       `Menerangkan bahwa sepanjang pengetahuan kami yang bersangkutan berkelakuan baik, tidak pernah terlibat kasus hukum, dan surat pengantar ini diberikan untuk pengurusan SKCK di kepolisian untuk keperluan: ${dataKustom.keperluan ?? "-"}.`,
       marginLeft, y, { width: bodyWidth, align: "justify" }
     );
@@ -384,7 +390,7 @@ function drawBodyContent(doc: PDFKit.PDFDocument, surat: SuratWithId) {
 
   // Penutup
   doc
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(10)
     .fillColor("#222")
     .text(
