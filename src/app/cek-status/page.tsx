@@ -21,7 +21,6 @@ import {
   FileText,
   CreditCard,
   CalendarDays,
-  ExternalLink,
   CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -289,18 +288,7 @@ function CekStatus() {
                           </div>
                         )}
 
-                        {/* Berkas syarat link */}
-                        {surat.url_berkas_syarat && (
-                          <a
-                            href={surat.url_berkas_syarat}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            Lihat berkas syarat yang diunggah
-                          </a>
-                        )}
+
                       </CardContent>
                     </Card>
                   );
