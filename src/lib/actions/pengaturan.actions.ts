@@ -27,13 +27,16 @@ export async function getPengaturanDesa(): Promise<ActionResult<PengaturanDesa>>
     const map = new Map<string, string>();
     list.forEach((item) => map.set(item.key, item.value));
 
+    const rawTtd = map.get("url_ttd");
+    const rawStempel = map.get("url_stempel");
+
     return {
       success: true,
       data: {
         nama_kades: map.get("nama_kades") || DEFAULT_PENGATURAN.nama_kades,
         jabatan_kades: map.get("jabatan_kades") || DEFAULT_PENGATURAN.jabatan_kades,
-        url_ttd: map.get("url_ttd") || DEFAULT_PENGATURAN.url_ttd,
-        url_stempel: map.get("url_stempel") || DEFAULT_PENGATURAN.url_stempel,
+        url_ttd: rawTtd !== undefined ? (rawTtd === "none" ? "" : rawTtd) : DEFAULT_PENGATURAN.url_ttd,
+        url_stempel: rawStempel !== undefined ? (rawStempel === "none" ? "" : rawStempel) : DEFAULT_PENGATURAN.url_stempel,
       },
     };
   } catch (error) {
@@ -56,10 +59,11 @@ export async function updatePengaturanDesa(
 
     for (const [key, value] of entries) {
       if (value !== undefined && value !== null) {
+        const valueToSave = (key === "url_ttd" || key === "url_stempel") && value === "" ? "none" : value;
         await prisma.pengaturan.upsert({
           where: { key },
-          update: { value },
-          create: { key, value },
+          update: { value: valueToSave },
+          create: { key, value: valueToSave },
         });
       }
     }

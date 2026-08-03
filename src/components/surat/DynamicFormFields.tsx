@@ -42,6 +42,21 @@ export function DynamicFormFields({
               className="bg-white min-h-[80px] resize-none"
               rows={3}
             />
+          ) : field.type === "select" ? (
+            <select
+              id={`custom-${field.name}`}
+              value={values[field.name] ?? ""}
+              onChange={(e) => onChange(field.name, e.target.value)}
+              className="w-full h-10 px-3 py-2 text-sm bg-white rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- {field.placeholder ?? "Pilih"} --</option>
+              {"options" in field &&
+                (field as { options?: readonly string[] }).options?.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+            </select>
           ) : (
             <Input
               id={`custom-${field.name}`}

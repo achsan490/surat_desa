@@ -199,9 +199,19 @@ export async function generateFromTemplate(
       const combinedPath = path.join(process.cwd(), "public", "assets", "ttd-dan-stempel.png");
       const combinedBuf = fs.existsSync(combinedPath) ? fs.readFileSync(combinedPath) : null;
 
-      if (pengaturan?.url_stempel || pengaturan?.url_ttd) {
-        const customStempel = pengaturan?.url_stempel ? resolveImageBuffer(pengaturan.url_stempel) : null;
-        const customTTD = pengaturan?.url_ttd ? resolveImageBuffer(pengaturan.url_ttd) : null;
+      const isTtdDeleted = pengaturan?.url_ttd === "";
+      const isStempelDeleted = pengaturan?.url_stempel === "";
+
+      if (isTtdDeleted && isStempelDeleted) {
+        // Jika TTD & Stempel sama-sama dihapus admin, gunakan PNG transparan 1x1
+        const TRANSPARENT_PNG = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+          "base64"
+        );
+        zip.file(signatureMedia[0], TRANSPARENT_PNG);
+      } else if (pengaturan?.url_stempel || pengaturan?.url_ttd) {
+        const customStempel = (pengaturan?.url_stempel && !isStempelDeleted) ? resolveImageBuffer(pengaturan.url_stempel) : null;
+        const customTTD = (pengaturan?.url_ttd && !isTtdDeleted) ? resolveImageBuffer(pengaturan.url_ttd) : null;
         const bufToUse = customStempel || customTTD || combinedBuf;
         if (bufToUse) {
           zip.file(signatureMedia[0], bufToUse);

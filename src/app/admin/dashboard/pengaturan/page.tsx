@@ -237,6 +237,31 @@ export default function PengaturanPage() {
     }
   };
 
+  // ── Hapus TTD & Stempel ────────────────────────────────────────────────────
+  const handleDeleteTtd = () => {
+    setUrlTtd("");
+    startTransition(async () => {
+      const res = await updatePengaturanDesa({ url_ttd: "" });
+      if (res.success) {
+        toast.success("Foto Tanda Tangan berhasil dihapus!");
+      } else {
+        toast.error("Gagal menghapus Tanda Tangan.");
+      }
+    });
+  };
+
+  const handleDeleteStempel = () => {
+    setUrlStempel("");
+    startTransition(async () => {
+      const res = await updatePengaturanDesa({ url_stempel: "" });
+      if (res.success) {
+        toast.success("Foto Stempel Desa berhasil dihapus!");
+      } else {
+        toast.error("Gagal menghapus Stempel Desa.");
+      }
+    });
+  };
+
   // ── Upload Template Surat ─────────────────────────────────────────────────
   const handleTemplateUpload = async (file: File, jenisSurat: string) => {
     setUploadingTemplate((prev) => ({ ...prev, [jenisSurat]: true }));
@@ -446,7 +471,7 @@ export default function PengaturanPage() {
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="flex gap-2">
                   <input
                     type="file"
                     id="ttdFileInput"
@@ -462,7 +487,7 @@ export default function PengaturanPage() {
                     variant="outline"
                     disabled={uploadingTtd}
                     onClick={() => document.getElementById("ttdFileInput")?.click()}
-                    className="w-full gap-2 border-slate-300 hover:bg-slate-100"
+                    className="flex-1 gap-2 border-slate-300 hover:bg-slate-100"
                   >
                     {uploadingTtd ? (
                       <>
@@ -472,10 +497,23 @@ export default function PengaturanPage() {
                     ) : (
                       <>
                         <Upload className="h-4 w-4 text-slate-600" />
-                        Unggah Tanda Tangan Baru
+                        {urlTtd ? "Ganti TTD Baru" : "Unggah TTD"}
                       </>
                     )}
                   </Button>
+                  {urlTtd && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={handleDeleteTtd}
+                      className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                      title="Hapus Tanda Tangan"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                      Hapus TTD
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </div>
@@ -514,7 +552,7 @@ export default function PengaturanPage() {
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="flex gap-2">
                   <input
                     type="file"
                     id="stempelFileInput"
@@ -530,7 +568,7 @@ export default function PengaturanPage() {
                     variant="outline"
                     disabled={uploadingStempel}
                     onClick={() => document.getElementById("stempelFileInput")?.click()}
-                    className="w-full gap-2 border-slate-300 hover:bg-slate-100"
+                    className="flex-1 gap-2 border-slate-300 hover:bg-slate-100"
                   >
                     {uploadingStempel ? (
                       <>
@@ -540,10 +578,23 @@ export default function PengaturanPage() {
                     ) : (
                       <>
                         <Upload className="h-4 w-4 text-slate-600" />
-                        Unggah Stempel Desa Baru
+                        {urlStempel ? "Ganti Stempel Baru" : "Unggah Stempel"}
                       </>
                     )}
                   </Button>
+                  {urlStempel && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={handleDeleteStempel}
+                      className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                      title="Hapus Stempel Desa"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                      Hapus Stempel
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </div>
